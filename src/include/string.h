@@ -15,6 +15,8 @@ char *strcpy(char *dst, const char *src);
 
 char *strcat(char *dst, const char *src);
 
+const char* strfind(const char *str, char ch);
+
 int strlen(const char *src);
 
 #endif

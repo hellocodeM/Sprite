@@ -46,7 +46,7 @@ dd MBOOT_CHECKSUM       ; 检测数值，其含义在定义处
 
 [GLOBAL start]      ; 向外部声明内核代码入口，此处提供该声明给链接器
 [GLOBAL glb_mboot_ptr]  ; 向外部声明 struct multiboot * 变量
-[EXTERN kern_entry]     ; 声明内核 C 代码的入口函数
+[EXTERN _Z10kern_entryv]     ; 声明内核 C 代码的入口函数
 
 start:
     cli              ; 此时还没有设置好保护模式的中断处理，要关闭中断
@@ -54,7 +54,7 @@ start:
     mov ebp, 0       ; 帧指针修改为 0
     and esp, 0FFFFFFF0H  ; 栈地址按照16字节对齐
     mov [glb_mboot_ptr], ebx ; 将 ebx 中存储的指针存入全局变量
-    call kern_entry      ; 调用内核入口函数
+    call _Z10kern_entryv      ; 调用内核入口函数
 stop:
     hlt              ; 停机指令，可以降低 CPU 功耗
     jmp stop         ; 到这里结束，关机什么的后面再说
