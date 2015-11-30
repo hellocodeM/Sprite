@@ -50,6 +50,6 @@ bochs:
 	bochs -f tools/bochsrc.txt
 
 debug:
-	qemu -S -s -fda floppy.img -boot a &
+	qemu -S -gdb tcp::1080 -fda floppy.img -boot a &
 	sleep 1
-	cgdb -x tools/gdbinit"")"")
+	cgdb -x scripts/gdbinit
