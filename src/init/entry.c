@@ -1,3 +1,4 @@
+#include "printk.h"
 #include "debug.h"
 
 int kern_entry() {
