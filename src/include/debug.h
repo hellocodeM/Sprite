@@ -1,16 +1,32 @@
-#ifndef PRINTK_H
-#define PRINTK_H
+#ifndef DEBUG_H
+#define DEBUG_H
 
 #include "console.h"
 #include "string.h"
 
+#define assert(x, info) \
+    do { \
+        if (!(x)) { \
+            panic(info); \
+        } \
+    } while(0) 
+
+#define static_assert(x) \
+    switch (x) { case 0: case(x): ; }
+
+void init_debug();
+
+void panic(const char* msg);
+
+void print_cur_status();
+
 enum Format { kNone, kDec, kHex };
 
-void printk(char ch, Format f = kNone) { console_putc(ch); }
+static void printk(char ch, Format f = kNone) { console_putc(ch); }
 
-void printk(const char* str, Format f = kNone) { console_write(str); }
+static void printk(const char* str, Format f = kNone) { console_write(str); }
 
-void printk(int n, Format f) {
+static void printk(int n, Format f = kNone) {
     switch (f) {
         case kDec:
             console_write_dec(n);
@@ -47,4 +63,4 @@ void printk(const char* format, Head head, Tail... tail) {
     }
 }
 
-#endif
+#endif 
