@@ -1,6 +1,7 @@
 #include "common.h"
 #include "string.h"
 #include "elf.h"
+#include "vmm.h"
 
 // 从 multiboot_t 结构获取ELF信息
 elf_t elf_from_multiboot(multiboot_t *mb) {
@@ -9,7 +10,7 @@ elf_t elf_from_multiboot(multiboot_t *mb) {
 
     uint32_t shstrtab = sh[mb->shndx].addr;
     for (uint32_t i = 0; i < mb->num; i++) {
-        const char *name = (const char *)(shstrtab + sh[i].name);
+        const char *name = (const char *)(shstrtab + sh[i].name) + PAGE_OFFSET;
         // 在 GRUB 提供的 multiboot 信息中寻找
         // 内核 ELF 格式所提取的字符串表和符号表
         if (strcmp(name, ".strtab") == 0) {

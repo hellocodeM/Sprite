@@ -4,23 +4,56 @@
 #include "idt.h"
 #include "timer.h"
 #include "pmm.h"
+#include "vmm.h"
 
-void fuck(pt_regs *regs) {
-    printk("holy, shit\n");
+void kern_init();
+
+multiboot_t *glb_mboot_ptr;
+
+char kern_stack[STACK_SIZE];
+
+// 临时页表
+__attribute__((section(".init.data"))) pgd_t *pgd_tmp = (pgd_t *) 0x1000;
+__attribute__((section(".init.data"))) pgd_t *pte_low = (pgd_t *) 0x2000;
+__attribute__((section(".init.data"))) pgd_t *pte_high = (pgd_t *) 0x3000;
+
+extern "C" __attribute__((section(".init.text"))) void kern_entry() {
+    pgd_tmp[0] = (uint32_t) pte_low | PAGE_PRESENT | PAGE_WRITE;
+    pgd_tmp[PGD_INDEX(PAGE_OFFSET)] = (uint32_t)pte_high | PAGE_PRESENT | PAGE_WRITE;
+
+    for (int i = 0; i < 1024; i++) {
+        pte_low[i] = (i << 12) | PAGE_PRESENT | PAGE_WRITE;
+        pte_high[i] = (i << 12) | PAGE_PRESENT | PAGE_WRITE;
+    }
+
+    asm volatile ("mov %0, %%cr3" : : "r"(pgd_tmp));
+    
+    uint32_t cr0;
+    asm volatile ("mov %%cr0, %0" : "=r"(cr0));
+    cr0 |= 0x80000000;
+    asm volatile ("mov %0, %%cr0" : : "r"(cr0));
+
+    uint32_t kern_stack_top = ((uint32_t)kern_stack + STACK_SIZE) & 0xFFFFFFF0;
+    asm volatile ("mov %0, %%esp;"
+            "xor %%ebp, %%ebp" : : "r"(kern_stack_top));
+
+    glb_mboot_ptr = mboot_ptr_tmp + PAGE_OFFSET;
+    
+    kern_init();
 }
+
 
 void show_kern_mmap() {
     printk("kernel in memory start: 0x%s\n", kern_start);
     printk("kernel in memory end: 0x%s\n", kern_end);
 }
 
-extern "C" int kern_entry() {
+void kern_init() {
+    init_vmm();
     init_debug();
     init_gdt();
     init_idt();
     init_pmm();
-
-    register_isr(255, fuck);
     init_timer(20);
     
     console_clear();
@@ -37,5 +70,6 @@ extern "C" int kern_entry() {
     alloc_addr = pmm_alloc_page();
     printk("alloc physical addr: 0x%x\n", alloc_addr);
     
-    return 0;
+    while (1)
+        asm volatile ("hlt");
 }
