@@ -141,6 +141,9 @@ extern "C" void isr_dispatcher(pt_regs *regs) {
     }
 }
 
+/**
+ * 分发IRQ
+ */
 extern "C" void irq_dispatcher(pt_regs *regs) {
     if (regs->int_no >= 40) {
         outb(0xA0, 0x20);

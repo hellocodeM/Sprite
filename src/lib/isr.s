@@ -87,10 +87,10 @@ iret
 %macro IRQ 2
 [GLOBAL irq%1]
 irq%1:
-cli
-push byte 0
-push byte %2
-jmp irq_common_stub
+    cli
+    push byte 0
+    push byte %2
+    jmp irq_common_stub
 %endmacro
 
 IRQ   0,    32  ; 电脑系统计时器
@@ -113,30 +113,30 @@ IRQ  15,    47  ; IDE1 传输控制使用
 [GLOBAL irq_common_stub]
 [EXTERN irq_dispatcher]
 irq_common_stub:
-pusha                ; pushes edi, esi, ebp, esp, ebx, edx, ecx, eax
+    pusha                ; pushes edi, esi, ebp, esp, ebx, edx, ecx, eax
 
-mov ax, ds
-push eax             ; 保存数据段描述符
+    mov ax, ds
+    push eax             ; 保存数据段描述符
 
-mov ax, 0x10         ; 加载内核数据段描述符
-mov ds, ax
-mov es, ax
-mov fs, ax
-mov gs, ax
-mov ss, ax
+    mov ax, 0x10         ; 加载内核数据段描述符
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
 
-push esp
-call irq_dispatcher
-add esp, 4
+    push esp
+    call irq_dispatcher
+    add esp, 4
 
-pop ebx              ; 恢复原来的数据段描述符
-mov ds, bx
-mov es, bx
-mov fs, bx
-mov gs, bx
-mov ss, bx
+    pop ebx              ; 恢复原来的数据段描述符
+    mov ds, bx
+    mov es, bx
+    mov fs, bx
+    mov gs, bx
+    mov ss, bx
 
-popa                 ; Pops edi,esi,ebp...
-add esp, 8           ; 清理压栈的 错误代码 和 ISR 编号
-iret                 ; 出栈 CS, EIP, EFLAGS, SS, ESP
+    popa                 ; Pops edi,esi,ebp...
+    add esp, 8           ; 清理压栈的 错误代码 和 ISR 编号
+    iret                 ; 出栈 CS, EIP, EFLAGS, SS, ESP
 .end:

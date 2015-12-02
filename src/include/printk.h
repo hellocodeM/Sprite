@@ -11,6 +11,8 @@ static void printk(char ch, Format f = kNone) { console_putc(ch); }
 
 static void printk(const char* str, Format f = kNone) { console_write(str); }
 
+static void printk(const uint8_t* str, Format f = kNone) { console_write((const char*)str); }
+
 static void printk(int n, Format f = kNone) {
     switch (f) {
         case kDec:
@@ -23,6 +25,7 @@ static void printk(int n, Format f = kNone) {
             console_write_dec(n);
     }
 }
+
 static void printk(uint32_t n, Format f = kNone) {
     switch (f) {
         case kDec:

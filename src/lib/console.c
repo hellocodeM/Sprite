@@ -99,7 +99,6 @@ inline static void console_write_hex_single(uint32_t n, real_color_t back, real_
 }
 
 void console_write_hex(uint32_t n, real_color_t back, real_color_t fore) {
-    console_write("0x", back, fore);
     const uint8_t mask = 0xF;
     uint8_t started = FALSE;
     for (int i = 28; i >= 0; i -= 4) {
