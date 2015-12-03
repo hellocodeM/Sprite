@@ -5,6 +5,7 @@
 #include "timer.h"
 #include "pmm.h"
 #include "vmm.h"
+#include "keyboard.h"
 
 void kern_init();
 
@@ -57,22 +58,13 @@ void kern_init() {
     init_gdt();
     init_idt();
     init_pmm();
-    init_timer(20);
+    init_keyboard();
+    //init_vmm();
+    //init_timer(20);
     
     console_clear();
     printk("Hello, Code\n");
 
-    show_mmap();
-    uint32_t alloc_addr = NULL;
-    printk("Test physical memory alloc: \n");
-
-    alloc_addr = pmm_alloc_page();
-    printk("alloc physical addr: 0x%x\n", alloc_addr);
-    alloc_addr = pmm_alloc_page();
-    printk("alloc physical addr: 0x%x\n", alloc_addr);
-    alloc_addr = pmm_alloc_page();
-    printk("alloc physical addr: 0x%x\n", alloc_addr);
-    
     while (1)
-        asm volatile ("hlt");
+        ;
 }

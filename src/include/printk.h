@@ -5,7 +5,7 @@
 #include "string.h"
 #include "console.h"
 
-enum Format { kNone, kDec, kHex };
+enum Format { kNone, kDec, kHex};
 
 static void printk(char ch, Format f = kNone) { console_putc(ch); }
 
@@ -53,6 +53,9 @@ void printk(const char* format, Head head, Tail... tail) {
                 printk(head, kHex);
                 break;
             case 's':
+                printk(head);
+                break;
+            case 'c':
                 printk(head);
                 break;
             default:

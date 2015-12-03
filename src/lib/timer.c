@@ -24,7 +24,6 @@ void init_timer(uint32_t frequency) {
     // 貌似这个频率只支持16位，所以最大65535, 这也限制了我们能够使用的最小中断频率，1193180/65525=18
     uint8_t low =(uint8_t)(divisor & 0xFF);
     uint8_t high = (uint8_t)((divisor >> 8) & 0xFF);
-
     outb(0x40, low);
     outb(0x40, high);
 }

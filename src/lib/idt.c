@@ -122,9 +122,6 @@ void init_idt() {
     idt_set_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
 
-    // 255 将来用于实现系统调用
-    idt_set_gate(255, (uint32_t)isr255, 0x08, 0x8E);
-
     // 更新设置中断描述符表
     idt_flush((uint32_t)&idt_ptr);
 }
