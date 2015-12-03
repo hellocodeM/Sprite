@@ -58,6 +58,17 @@ uint32_t pmm_alloc_page() {
     return pmm_stack[pmm_stack_top--];
 }
 
+uint32_t pmm_alloc_page(uint32_t pma) {
+    for (int i = 0; i <= pmm_stack_top; i++) {
+        if (pmm_stack[i] == pma) {
+            uint32_t res = pmm_stack[i];
+            pmm_stack[i] = pmm_stack[pmm_stack_top--];
+            return res;
+        }
+    }
+    return 0;
+}
+
 void pmm_free_page(uint32_t p) {
     assert(pmm_stack_top != PAGE_MAX_SIZE, "out of pmm_stack");
     pmm_stack[++pmm_stack_top] = p;

@@ -7,7 +7,8 @@
 #define assert(x, info) \
     do { \
         if (!(x)) { \
-            panic(info); \
+            printk(info); \
+            while(1); \
         } \
     } while(0) 
 

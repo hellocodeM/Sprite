@@ -30,6 +30,8 @@ void init_pmm();
 // 申请内存
 uint32_t pmm_alloc_page();
 
+uint32_t pmm_alloc_page(uint32_t pma);
+
 // 释放内存
 void pmm_free_page(uint32_t p);
 
