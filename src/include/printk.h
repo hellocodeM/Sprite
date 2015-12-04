@@ -5,26 +5,13 @@
 #include "string.h"
 #include "console.h"
 
-enum Format { kNone, kDec, kHex};
+enum Format { kNone, kDec, kHex };
 
 static void printk(char ch, Format f = kNone) { console_putc(ch); }
 
 static void printk(const char* str, Format f = kNone) { console_write(str); }
 
 static void printk(const uint8_t* str, Format f = kNone) { console_write((const char*)str); }
-
-static void printk(int n, Format f = kNone) {
-    switch (f) {
-        case kDec:
-            console_write_dec(n);
-            break;
-        case kHex:
-            console_write_hex(n);
-            break;
-        default:
-            console_write_dec(n);
-    }
-}
 
 static void printk(uint32_t n, Format f = kNone) {
     switch (f) {
@@ -38,6 +25,8 @@ static void printk(uint32_t n, Format f = kNone) {
             console_write_dec(n);
     }
 }
+
+static void printk(int n, Format f = kNone) { printk((uint32_t)n, f); }
 
 template <class Head, class... Tail>
 void printk(const char* format, Head head, Tail... tail) {
@@ -53,8 +42,6 @@ void printk(const char* format, Head head, Tail... tail) {
                 printk(head, kHex);
                 break;
             case 's':
-                printk(head);
-                break;
             case 'c':
                 printk(head);
                 break;

@@ -1,6 +1,6 @@
-[GLOBAL _Z9gdt_flushj]
+[GLOBAL gdt_flush]
 
-_Z9gdt_flushj:
+gdt_flush:
     mov eax, [esp+4]  ; 参数存入 eax 寄存器
     lgdt [eax]        ; 加载到 GDTR [修改原先GRUB设置]
 

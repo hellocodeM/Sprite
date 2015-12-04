@@ -5,7 +5,7 @@
 #include "debug.h"
 
 // 管理物理内存的栈
-static uint32_t pmm_stack[PAGE_MAX_SIZE+1];
+static uint32_t pmm_stack[PAGE_MAX_SIZE + 1];
 
 // 栈顶
 static uint32_t pmm_stack_top;
@@ -18,24 +18,22 @@ void show_mmap() {
     uint32_t mmap_length = glb_mboot_ptr->mmap_length;
 
     printk("Memory map:\n");
-    
-    mmap_entry_t *mmap = (mmap_entry_t*)mmap_addr;
+
+    mmap_entry_t *mmap = (mmap_entry_t *)mmap_addr;
     for (; (uint32_t)mmap < mmap_addr + mmap_length; mmap++) {
-        printk("base_addr= 0x%x%x, length = %x%x, type = %x\n",
-                (uint32_t)mmap->base_addr_high,
-                (uint32_t)mmap->base_addr_low,
-                (uint32_t)mmap->length_high,
-                (uint32_t)mmap->length_low,
-                (uint32_t)mmap->type);
+        printk("base_addr= 0x%x%x, length = %x%x, type = %x\n", (uint32_t)mmap->base_addr_high,
+               (uint32_t)mmap->base_addr_low, (uint32_t)mmap->length_high,
+               (uint32_t)mmap->length_low, (uint32_t)mmap->type);
     }
 }
 
-void init_pmm(){
+void init_pmm() {
     pmm_stack_top = -1;
     phy_page_count = 0;
 
-    mmap_entry_t *mmap_start_addr = (mmap_entry_t*)glb_mboot_ptr->mmap_addr;
-    mmap_entry_t *mmap_end_addr = (mmap_entry_t*)glb_mboot_ptr->mmap_addr + glb_mboot_ptr->mmap_length;
+    mmap_entry_t *mmap_start_addr = (mmap_entry_t *)glb_mboot_ptr->mmap_addr;
+    mmap_entry_t *mmap_end_addr =
+        (mmap_entry_t *)glb_mboot_ptr->mmap_addr + glb_mboot_ptr->mmap_length;
 
     mmap_entry_t *mmap_entry = mmap_start_addr;
     for (; mmap_entry < mmap_end_addr; mmap_entry++) {
@@ -59,7 +57,7 @@ uint32_t pmm_alloc_page() {
 }
 
 uint32_t pmm_alloc_page(uint32_t pma) {
-    for (int i = 0; i <= pmm_stack_top; i++) {
+    for (uint32_t i = 0; i <= pmm_stack_top; i++) {
         if (pmm_stack[i] == pma) {
             uint32_t res = pmm_stack[i];
             pmm_stack[i] = pmm_stack[pmm_stack_top--];
