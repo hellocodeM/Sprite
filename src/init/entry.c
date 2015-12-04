@@ -3,8 +3,8 @@
 #include "gdt.h"
 #include "idt.h"
 #include "timer.h"
-#include "pmm.h"
 #include "vmm.h"
+#include "pmm.h"
 #include "keyboard.h"
 
 void kern_init();
