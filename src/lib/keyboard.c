@@ -76,8 +76,9 @@ private:
 
 void keyboard_isr(pt_regs *regs) {
     static KeyBoard keyboard;
-
-    printk("%c", keyboard.TypeIn());
+    if (char ch = keyboard.TypeIn()) {
+        printk("%c", ch);
+    }
 }
 
 void init_keyboard() {
