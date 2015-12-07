@@ -28,14 +28,14 @@ extern "C" __attribute__((section(".init.text"))) void kern_entry() {
         pte_high[i] = pte_low[i] = (i << 12) | PAGE_PRESENT | PAGE_WRITE;
     }
 
-    // 设置页目录
-    asm volatile ("mov %0, %%cr3" : : "r"(pde_tmp));
-    
-    // 启用分页, 把cr0寄存器的paging位设置为1
+    // set page directory
+    asm volatile("mov %0, %%cr3;" : : "r"(pde_tmp));
+
+    // start paging
     uint32_t cr0;
-    asm volatile ("mov %%cr0, %0" : "=r"(cr0));
+    asm volatile("mov %%cr0, %0;" : "=r"(cr0));
     cr0 |= 0x80000000;
-    asm volatile ("mov %0, %%cr0" : : "r"(cr0));
+    asm volatile("mov %0, %%cr0;" : :"r"(cr0));
 
     // 使用新的内核栈
     uint32_t kern_stack_top = ((uint32_t)kern_stack + STACK_SIZE) & 0xFFFFFFF0;
@@ -49,8 +49,25 @@ extern "C" __attribute__((section(".init.text"))) void kern_entry() {
 
 
 void show_kern_mmap() {
-    printk("kernel in memory start: 0x%s\n", kern_start);
-    printk("kernel in memory end: 0x%s\n", kern_end);
+    uint32_t start = reinterpret_cast<uint32_t>(&kern_start);
+    uint32_t end = reinterpret_cast<uint32_t>(&kern_end);
+    printk("kernel in memory start: 0x%x\n", start);
+    printk("kernel in memory end: 0x%x\n", end);
+    printk("kernel size: 0x%x bytes\n", end - start);
+}
+
+void test_vmm() {
+    int i = 0;
+    int* p = &i;
+    printk("variable address: 0x%x\n", reinterpret_cast<uint32_t>(p));
+    printk("variable value: %d\n", *p);
+
+    printk("value at 0xc0000000: 0x%x\n", *(reinterpret_cast<uint32_t*>(0xc0000000)));
+    printk("value at 0xc0001000: 0x%x\n", *(reinterpret_cast<uint32_t*>(0xc0001000)));
+    printk("value at 0xc0002000: 0x%x\n", *(reinterpret_cast<uint32_t*>(0xc0002000)));
+
+    // this will cause a page fault
+    printk("value at 0x10002000: 0x%x\n", *(reinterpret_cast<uint32_t*>(0x10002000)));
 }
 
 void kern_init() {
@@ -59,11 +76,13 @@ void kern_init() {
     init_idt();
     init_pmm();
     init_keyboard();
-    //init_vmm();
+    init_vmm();
     //init_timer(20);
     
     console_clear();
     printk("Hello, Code\n");
+    show_kern_mmap();
+    test_vmm();
 
     while (1)
         ;

@@ -3,6 +3,7 @@
 
 #include "console.h"
 #include "string.h"
+#include "printk.h"
 
 #define assert(x, info) \
     do { \

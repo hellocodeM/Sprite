@@ -71,3 +71,4 @@ void pmm_free_page(uint32_t p) {
     assert(pmm_stack_top != PAGE_MAX_SIZE, "out of pmm_stack");
     pmm_stack[++pmm_stack_top] = p;
 }
+

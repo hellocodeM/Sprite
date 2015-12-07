@@ -8,7 +8,7 @@ extern uint8_t kern_start[];
 extern uint8_t kern_end[];
 
 // 线程栈的大小
-#define STACK_SIZE 8192
+#define STACK_SIZE 0x1000
 
 // 支持的物理内存大小
 #define PMM_MAX_SIZE 0x20000000
