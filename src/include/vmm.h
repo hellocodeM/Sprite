@@ -18,9 +18,9 @@
 #define PGD_INDEX(x) ((x) >> 22 & 0x3FF)
 #define PTE_INDEX(x) ((x) >> 12 & 0x3FF)
 
-#define PAGE_SIZE 1024
-#define DICTIONARY_MAX_SIZE 1024
+#define PAGE_SIZE 4096
 #define TABLE_MAX_SIZE 1024
+#define DICTIONARY_MAX_SIZE 1024
 #define TABLE_RESERVE 128
 
 typedef uint32_t pde_t;
