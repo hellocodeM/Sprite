@@ -111,6 +111,8 @@ void console_write_hex(uint32_t n, real_color_t back, real_color_t fore) {
             console_write_hex_single(slice, back, fore);
         }
     }
+    if (!started)
+        console_write_hex_single(0, back, fore);
 }
 
 void console_write_dec(uint32_t n, real_color_t back, real_color_t fore) {

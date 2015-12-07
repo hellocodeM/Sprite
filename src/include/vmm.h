@@ -26,6 +26,10 @@
 typedef uint32_t pde_t;
 typedef uint32_t pte_t;
 
+void init_vmm();
+
+void test_vmm();
+
 class PageTable {
 public:
     /**
@@ -154,6 +158,9 @@ private:
         return reinterpret_cast<PageTable*>(VMA(ENTRY_ADDR & pde));
     }
 
+    /**
+     * Allocate a page table
+     */
     PageTable* alloc_table() {
         assert(table_count < TABLE_RESERVE, "no page table available");
         PageTable* addr = &reserve[table_count++];
@@ -163,11 +170,10 @@ private:
     uint32_t dict_index(uint32_t addr) const { return (addr >> 22) & 0x3FF; }
 
     /* data members */
-    PageTable* entries[DICTIONARY_MAX_SIZE] __attribute__((aligned(PAGE_SIZE))) = {0};
-    PageTable reserve[TABLE_RESERVE] __attribute__((aligned(PAGE_SIZE)));
+    PageTable* entries[DICTIONARY_MAX_SIZE] = {0};
+    PageTable reserve[TABLE_RESERVE] ;
     uint32_t table_count = 0;
 };
 
-void init_vmm();
 
 #endif

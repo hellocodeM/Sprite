@@ -13,6 +13,14 @@ static uint32_t pmm_stack_top;
 // 物理页的数量
 uint32_t phy_page_count;
 
+void show_kern_mmap() {
+    uint32_t start = reinterpret_cast<uint32_t>(&kern_start);
+    uint32_t end = reinterpret_cast<uint32_t>(&kern_end);
+    printk("kernel in memory start: 0x%x\n", start);
+    printk("kernel in memory end: 0x%x\n", end);
+    printk("kernel size: 0x%x bytes\n", end - start);
+}
+
 void show_mmap() {
     uint32_t mmap_addr = glb_mboot_ptr->mmap_addr;
     uint32_t mmap_length = glb_mboot_ptr->mmap_length;
