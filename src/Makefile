@@ -6,11 +6,11 @@ S_SOURCES = $(shell find . -name "*.s")
 S_OBJECTS = $(patsubst %.s, %.o, $(S_SOURCES))
 TARGET = Sprite
 
-CC = gcc
+CC = g++
 LD = ld
 ASM = nasm
 
-C_FLAGS = -c -Wall -m32 -ggdb -gstabs+ -nostdinc -fno-builtin -fno-stack-protector -I include
+C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb -gstabs+ -nostdinc -fno-builtin -fno-stack-protector -I include
 LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -nostdlib
 ASM_FLAGS = -f elf -g -F stabs
 
@@ -50,6 +50,6 @@ bochs:
 	bochs -f tools/bochsrc.txt
 
 debug:
-	qemu -S -s -fda floppy.img -boot a &
+	qemu -S -gdb tcp::1080 -fda floppy.img -boot a &
 	sleep 1
-	cgdb -x tools/gdbinit"")"")
+	cgdb -x scripts/gdbinit

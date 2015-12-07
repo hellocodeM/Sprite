@@ -1,8 +1,9 @@
 #include "console.h"
 #include "common.h"
+#include "vmm.h"
 
 // 显存地址
-static uint16_t *video_memory = (uint16_t*)0xB8000;
+static uint16_t *video_memory = (uint16_t*)(0xB8000 + PAGE_OFFSET);
 
 // 光标地址
 static uint8_t cursor_x = 0;
@@ -52,10 +53,9 @@ static void scroll() {
     }
 }
 
-void console_putc_color(char c, real_color_t back, real_color_t fore) {
+void console_putc(char c, real_color_t back, real_color_t fore) {
     uint16_t ch = make_char(c, make_color(back, fore));
 
-    // 0x08是退格键
     switch (c) {
         case '\b':
             if (cursor_x)
@@ -85,28 +85,21 @@ void console_putc_color(char c, real_color_t back, real_color_t fore) {
     move_cursor();
 }
 
-void console_write(char *cstr) {
-    while (*cstr) {
-        console_putc_color(*cstr++, rc_black, rc_white);
-    }
-}
-
-void console_write_color(char *str, real_color_t back, real_color_t fore) {
+void console_write(const char *str, real_color_t back, real_color_t fore) {
     while (*str) {
-        console_putc_color(*str++, back, fore);
+        console_putc(*str++, back, fore);
     }
 }
 
 // 输出单个十六进制字符
 inline static void console_write_hex_single(uint32_t n, real_color_t back, real_color_t fore) {
     if (n < 10)
-        console_putc_color('0' + n, back, fore);
+        console_putc('0' + n, back, fore);
     else
-        console_putc_color('A' + n - 10, back, fore);
+        console_putc('A' + n - 10, back, fore);
 }
 
 void console_write_hex(uint32_t n, real_color_t back, real_color_t fore) {
-    console_write_color("0x", back, fore);
     const uint8_t mask = 0xF;
     uint8_t started = FALSE;
     for (int i = 28; i >= 0; i -= 4) {
@@ -118,13 +111,15 @@ void console_write_hex(uint32_t n, real_color_t back, real_color_t fore) {
             console_write_hex_single(slice, back, fore);
         }
     }
+    if (!started)
+        console_write_hex_single(0, back, fore);
 }
 
 void console_write_dec(uint32_t n, real_color_t back, real_color_t fore) {
     if (n < 10) {
-        console_putc_color('0' + n, back, fore);
+        console_putc('0' + n, back, fore);
     } else {
         console_write_dec(n / 10, back, fore);
-        console_putc_color('0' + n % 10, back, fore);
+        console_putc('0' + n % 10, back, fore);
     }
 }
