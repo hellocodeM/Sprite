@@ -7,6 +7,7 @@
 #include "pmm.h"
 #include "keyboard.h"
 #include "kmalloc.h"
+#include "kthread.h"
 
 void kern_init();
 
@@ -56,13 +57,15 @@ void kern_init() {
     init_keyboard();
     init_vmm();
     init_heap();
-    //init_timer(20);
+    init_kthread();
+    init_timer(200);
     
     console_clear();
     printk("Hello, Code\n");
-    show_kern_mmap();
-    test_vmm();
-    test_kmalloc();
+    //show_kern_mmap();
+    //test_vmm();
+    //test_kmalloc();
+    test_kthread();
 
     while (1)
         ;
