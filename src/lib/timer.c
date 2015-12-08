@@ -3,10 +3,10 @@
 #include "common.h"
 #include "idt.h"
 #include "printk.h"
+#include "kthread.h"
 
 void timer_callback(pt_regs *regs) {
-    static uint32_t tick = 0;
-    printk("Tick: %d\n", tick++);
+    kthread_schedule();
 }
 
 /**

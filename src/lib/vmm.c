@@ -31,8 +31,8 @@ void page_fault_handler(pt_regs* regs) {
  * 3. register page fault handler
  */
 void init_vmm() {
-    // mapping 128MB kernel space
-    for (int i = 0; i < 128 * 1024 / 4; i++) {
+    // mapping 4MB kernel space
+    for (int i = 0; i < 4 * 1024 / 4; i++) {
         page_dictionary.insert(VMA(i << 12) , i << 12);
     }
     

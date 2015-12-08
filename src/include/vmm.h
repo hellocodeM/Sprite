@@ -6,7 +6,7 @@
 #include "debug.h"
 
 #define PAGE_OFFSET 0xC0000000
-#define PMA(x) ((x) - PAGE_OFFSET)
+#define PMA(x) ((x)-PAGE_OFFSET)
 #define VMA(x) ((x) + PAGE_OFFSET)
 
 #define PAGE_PRESENT 0b1
@@ -18,9 +18,9 @@
 #define PGD_INDEX(x) ((x) >> 22 & 0x3FF)
 #define PTE_INDEX(x) ((x) >> 12 & 0x3FF)
 
-#define PAGE_SIZE 1024
-#define DICTIONARY_MAX_SIZE 1024
+#define PAGE_SIZE 4096
 #define TABLE_MAX_SIZE 1024
+#define DICTIONARY_MAX_SIZE 1024
 #define TABLE_RESERVE 128
 
 typedef uint32_t pde_t;
@@ -171,9 +171,8 @@ private:
 
     /* data members */
     PageTable* entries[DICTIONARY_MAX_SIZE] = {0};
-    PageTable reserve[TABLE_RESERVE] ;
+    PageTable reserve[TABLE_RESERVE];
     uint32_t table_count = 0;
 };
-
 
 #endif
