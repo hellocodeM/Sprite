@@ -12,10 +12,6 @@ extern "C" {
 void switch_to(task_context* last, task_context* target);
 }
 
-void kthread_exit() { 
-    assert(false, "thread exit");
-}
-
 class TaskScheduler {
 public:
     void init() {
@@ -44,7 +40,10 @@ public:
         new_task->pid = pid_cnt_++;
 
         // use stack from the bottom
+        extern void kthread_exit(task_struct*); // define in kthread.h
         uint32_t* stack_top = reinterpret_cast<uint32_t*>((uint32_t)new_task + STACK_SIZE);
+        *(--stack_top) = (uint32_t)new_task; // the parameter to kthread_exit
+        *(--stack_top) = 0;                 // return address above the kthread_exit frame
         *(--stack_top) = (uint32_t)kthread_exit;
         *(--stack_top) = (uint32_t)fn;
 
@@ -66,6 +65,30 @@ public:
         if (running_) {
             change_task_to(running_->next);
         }
+    }
+
+    /**
+     * kill a task
+     */
+    void exit(task_struct* task) {
+        pid_t pid = task->pid;
+        // just 1 thread
+        if (runnable_tasks_->next == runnable_tasks_) {
+            runnable_tasks_->next = nullptr;
+            running_ = nullptr;
+        } else {
+        // more than one thread
+            task_struct *prev, *cur;
+            prev = runnable_tasks_;
+            cur = runnable_tasks_->next;
+            while (cur != task) {
+                cur = cur->next;
+                prev = prev->next;
+            }
+            prev->next = cur->next;
+        }
+        kfree(task);
+        printk("thread %d exit\n", pid);
     }
 
 private:

@@ -2,6 +2,7 @@
 #define KTHREAD_H
 
 #include "printk.h"
+#include "task.h"
 
 typedef void (*kthread_entry)();
 
@@ -19,6 +20,8 @@ void kthread(kthread_entry fn);
  * Call the scheduler to schedule kernel threads.
  */
 void kthread_schedule();
+
+void kthread_exit(task_struct*);
 
 /**
  * Test
