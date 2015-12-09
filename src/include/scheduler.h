@@ -12,11 +12,17 @@ extern "C" {
 void switch_to(task_context* last, task_context* target);
 }
 
+/**
+ * A simple task scheduler, it could create, kill, yield, resume a kernel thread.
+ * But the implementation of the task list is just a single linked list, and the code is bull shit,
+ * some day if i'm free, i'll refactor the fucking code.
+ */
 class TaskScheduler {
 public:
     void init() {
         pid_cnt_ = 0;
         runnable_tasks_ = nullptr;
+        waiting_tasks_ = nullptr;
 
         extern char* kern_stack;  // define in lib/entry.c
         running_ = reinterpret_cast<task_struct*>(&kern_stack);
@@ -40,9 +46,9 @@ public:
         new_task->pid = pid_cnt_++;
 
         // use stack from the bottom
-        extern void kthread_exit(task_struct*); // define in kthread.h
+        extern void kthread_exit(pid_t); // define in kthread.h
         uint32_t* stack_top = reinterpret_cast<uint32_t*>((uint32_t)new_task + STACK_SIZE);
-        *(--stack_top) = (uint32_t)new_task; // the parameter to kthread_exit
+        *(--stack_top) = (uint32_t)new_task->pid; // the parameter to kthread_exit
         *(--stack_top) = 0;                 // return address above the kthread_exit frame
         *(--stack_top) = (uint32_t)kthread_exit;
         *(--stack_top) = (uint32_t)fn;
@@ -70,6 +76,35 @@ public:
     /**
      * kill a task
      */
+
+    void kill(pid_t p) {
+        exit(find_task(p));
+    }
+
+    /*
+    bool yield(pid_t p) {
+        yield(find_task(p));
+    }
+
+    bool resume(pid_t p) {
+        resume(find_task(p));
+    }
+    */
+private:
+    /**
+     * Look up the task queue to find the task_struct,
+     * If none, return nullptr
+     */
+    task_struct* find_task(pid_t p) {
+        task_struct* res = runnable_tasks_;
+        do {
+            if (res->pid == p)
+                return res;
+            res = res->next;
+        } while (res->next != runnable_tasks_);
+        return nullptr;
+    }
+
     void exit(task_struct* task) {
         pid_t pid = task->pid;
         // just 1 thread
@@ -91,7 +126,6 @@ public:
         printk("thread %d exit\n", pid);
     }
 
-private:
     void change_task_to(task_struct* target) {
         if (running_ != target) {
             task_struct* last = running_;
@@ -103,6 +137,7 @@ private:
     /* data members */
     task_struct* runnable_tasks_;
     task_struct* running_;
+    task_struct* waiting_tasks_;
     pid_t pid_cnt_;
 };
 
