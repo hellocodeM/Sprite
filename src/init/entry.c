@@ -8,6 +8,8 @@
 #include "keyboard.h"
 #include "kmalloc.h"
 #include "kthread.h"
+#include "ide.h"
+#include "common.h"
 
 void kern_init();
 
@@ -59,14 +61,17 @@ void kern_init() {
     init_heap();
     init_kthread();
     init_timer(200);
+    assert(ide_init() == 0, "ide not available");
     
     console_clear();
     printk("Hello, Code\n");
+
     //show_kern_mmap();
     //test_vmm();
     //test_kmalloc();
-    test_kthread();
+    //test_kthread();
+    //test_ide();
 
     while (1)
-        ;
+        cpu_hlt();
 }

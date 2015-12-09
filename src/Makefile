@@ -44,12 +44,12 @@ umount_image:
 	sudo umount /mnt/kernel
 
 qemu:
-	qemu -fda floppy.img -boot a
+	qemu -fda floppy.img -boot a -hda hdd.img
 
 bochs:
 	bochs -f tools/bochsrc.txt
 
 debug:
-	qemu -S -gdb tcp::1080 -fda floppy.img -boot a &
+	qemu -S -gdb tcp::1080 -fda floppy.img -boot a -hda hdd.img &
 	sleep 1
 	cgdb -x scripts/gdbinit
