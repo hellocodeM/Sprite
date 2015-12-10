@@ -1,10 +1,13 @@
 #ifndef LIST_H
 #define LIST_H
 
+#include "new.hpp"
+#include "types.h"
+
 /**
  * Linked list.
  */
-template <class T, class Allocator>
+template <class T>
 class List {
     struct ListNode {
         T data;
@@ -12,12 +15,10 @@ class List {
         ListNode* prev;
     };
 
-public:
     struct iterator {
         ListNode* node;
 
-        iterator(ListNode* n):node(n) {
-        }
+        iterator(ListNode* n) : node(n) {}
 
         iterator operator++() {
             node = node->next;
@@ -41,77 +42,136 @@ public:
             return tmp;
         }
 
-        T& operator*() {
-            return node->data;
-        }
+        T& operator*() { return node->data; }
 
-        T* operator->() {
-            return &node->data;
-        }
+        T* operator->() { return &node->data; }
 
-        bool operator==(iterator rhs) const {
-            return node == rhs.node;
-        }
+        bool operator==(iterator rhs) const { return node == rhs.node; }
 
-        bool operator!=(iterator rhs) const {
-            return !(*this == rhs);
-        }
+        bool operator!=(iterator rhs) const { return !(*this == rhs); }
     };
-    /* property */
-    uint32_t size() const {
-        return size_;
+public:
+    using iterator = struct iterator;
+    using value_type = T;
+    using pointer = T*;
+    using reference = T&;
+    using size_t = uint32_t;
+
+    /* constructor, destructor, operator = */
+    List(): size_(0), head_(0) {}
+
+    ~List() {
+        //todo
     }
 
-    /* modify */
-    void push_front(const T& d) {
-        ListNode* node = new ListNode(d);
-        node->next = head_;
-        head_ = node;
+    List(const List& other) {
+
     }
 
-    void pop_front() {
-        assert(head_);
-        ListNode* tmp = head_;
-        head_ = head_->next;
-        delete tmp;
+    List(List&& other) {
+
     }
 
-    T& front() {
-        return head_->data;
+    List& operator= (const List& rhs) {
+
     }
 
-    iterator insert_after(iterator iter, const T& data) {
-        ListNode* node = new ListNode(data);
-        ListNode* next = iter.node.next;
-        iter.node.next = node;
-        node->next = next;
-        return iterator(node);
+    List& operator= (List&& rhs) {
+
     }
 
-    void inter_before(iterator iter, const T& data) {
-        ListNode* node = new ListNode(data);
-        ListNode* prev = iter.node.prev;
-        prev->next = node;
-        node = &iter.node;
+    void assign(size_t count, const T& value) {
+
     }
 
-    void erase(iterator iter) {
-        ListNode* next = iter.node;
-        assert(next);
-        
+    template <class InputIterator>
+    void assign(InputIterator first, InputIterator last) {
+
     }
 
-    /* visit */
+    /* element access */
+    reference front() {
+
+    }
+
+    reference back() {
+
+    }
+
+    /* iterators */
     iterator begin() {
-        return iterator(head_);
+
+    }
+
+    iterator rbegin() {
+
     }
 
     iterator end() {
-        return iterator{};
+
     }
-private:
-    uint32_t size_;
-    ListNode* head_;
+
+    iterator rend() {
+
+    }
+
+    /* capacity */
+    bool empty() const {
+
+    }
+
+    size_t size() const {
+
+    }
+
+    /* modifier */
+    void clear() {
+
+    }
+
+    iterator insert(iterator pos, const reference value) {
+
+    }
+
+    iterator insert(iterator pos, rvalue_ref value) {
+
+    }
+
+    template <class InputIterator>
+    void insert(iterator pos, InputIterator first, InputIterator last) {
+
+    }
+
+    iterator erase(iterator pos) {
+
+    }
+
+    iterator erase(iterator first, iterator last) {
+
+    }
+
+    void push_back(const reference value) {
+
+    }
+
+    void pop_back() {
+
+    }
+
+    void push_front(const reference value) {
+
+    }
+
+    void pop_front() {
+
+    }
+
+    void swap(List& other) {
+
+    }
+
+    /* operations */
+
 };
 
 #endif

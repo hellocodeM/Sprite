@@ -1,10 +1,11 @@
 #include "kthread.h"
 #include "scheduler.h"
+#include "new.hpp"
 
 static TaskScheduler scheduler;
 
 void init_kthread() {
-    scheduler.init();
+    new (&scheduler) TaskScheduler();
 }
 
 pid_t kthread(kthread_entry fn) {

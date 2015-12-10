@@ -19,7 +19,7 @@ void switch_to(task_context* last, task_context* target);
  */
 class TaskScheduler {
 public:
-    void init() {
+    TaskScheduler() {
         pid_cnt_ = 0;
         runnable_tasks_ = nullptr;
         waiting_tasks_ = nullptr;

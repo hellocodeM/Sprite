@@ -10,7 +10,8 @@
 #include "kthread.h"
 #include "ide.h"
 #include "common.h"
-
+#include "new.hpp"
+#include "atomic.h"
 void kern_init();
 
 multiboot_t *glb_mboot_ptr;
@@ -62,7 +63,7 @@ void kern_init() {
     init_kthread();
     init_timer(200);
     assert(ide_init() == 0, "ide not available");
-    
+
     console_clear();
     printk("Hello, Code\n");
 
@@ -72,6 +73,11 @@ void kern_init() {
     //test_kthread();
     //test_ide();
 
+    atomic_t i;
+    i.add(1);
+    i.reduce(1);
+    i.set(1);
+    
     while (1)
         cpu_hlt();
 }
