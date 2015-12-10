@@ -14,14 +14,27 @@ void init_kthread();
 /**
  * Create a kernel thread.
  */
-void kthread(kthread_entry fn);
+pid_t kthread(kthread_entry fn);
 
 /**
  * Call the scheduler to schedule kernel threads.
  */
 void kthread_schedule();
 
-void kthread_exit(task_struct*);
+/**
+ * Normally exit or kill a thread
+ */
+void kthread_exit(pid_t);
+
+/**
+ * Yield a thread.
+ */
+//void kthread_yield(pid_t);
+
+/**
+ * Resume the thread
+ */
+//void kthread_resume(pid_t);
 
 /**
  * Test

@@ -2,12 +2,13 @@
 #include "ILAllocator.hpp"
 #include "printk.h"
 #include "debug.h"
+#include "new.hpp"
 
 const uint32_t kHeapStart = 0xD0000000;
 const uint32_t kHeapEnd = 0xD1000000;
 static ImplicitListAllocator allocator(kHeapStart, kHeapEnd);
 
-void init_heap() { allocator.set_bound(kHeapStart, kHeapEnd); }
+void init_heap() { new (&allocator) ImplicitListAllocator(kHeapStart, kHeapEnd); }
 
 void *kmalloc(uint32_t size) { return allocator.alloc(size); }
 
