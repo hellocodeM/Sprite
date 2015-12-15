@@ -136,11 +136,12 @@ int ide_read_secs(uint32_t secno, void *dst, uint32_t nsecs) {
     outb(IOBASE + ISA_COMMAND, IDE_CMD_READ);
 
     int ret = 0;
-    for (; nsecs > 0; nsecs--, dst += SECTSIZE) {
+    auto out = reinterpret_cast<uint8_t*>(dst);
+    for (; nsecs > 0; nsecs--, out += SECTSIZE) {
         if ((ret = ide_wait_ready(IOBASE, 1)) != 0) {
             return ret;
         }
-        insl(IOBASE, dst, SECTSIZE / sizeof(uint32_t));
+        insl(IOBASE, out, SECTSIZE / sizeof(uint32_t));
     }
 
     return ret;
@@ -162,11 +163,12 @@ int ide_write_secs(uint32_t secno, const void *src, uint32_t nsecs) {
     outb(IOBASE + ISA_COMMAND, IDE_CMD_WRITE);
 
     int ret = 0;
-    for (; nsecs > 0; nsecs--, src += SECTSIZE) {
+    auto input = reinterpret_cast<const uint8_t*>(src);
+    for (; nsecs > 0; nsecs--, input += SECTSIZE) {
         if ((ret = ide_wait_ready(IOBASE, 1)) != 0) {
             return ret;
         }
-        outsl(IOBASE, src, SECTSIZE / sizeof(uint32_t));
+        outsl(IOBASE, input, SECTSIZE / sizeof(uint32_t));
     }
 
     return ret;

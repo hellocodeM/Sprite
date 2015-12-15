@@ -8,7 +8,11 @@ const uint32_t kHeapStart = 0xD0000000;
 const uint32_t kHeapEnd = 0xD1000000;
 static ImplicitListAllocator allocator(kHeapStart, kHeapEnd);
 
-void init_heap() { new (&allocator) ImplicitListAllocator(kHeapStart, kHeapEnd); }
+void init_heap() { 
+    //asm volatile(
+            //"call _Z41__static_initialization_and_destruction_0ii;");
+    new (&allocator) ImplicitListAllocator(kHeapStart, kHeapEnd); 
+}
 
 void *kmalloc(uint32_t size) { return allocator.alloc(size); }
 

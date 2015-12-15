@@ -7,7 +7,7 @@
 
 #define PAGE_OFFSET 0xC0000000
 #define PMA(x) ((x)-PAGE_OFFSET)
-#define VMA(x) ((x) + PAGE_OFFSET)
+#define VMA(x) ((x)+PAGE_OFFSET)
 
 #define PAGE_PRESENT 0b1
 #define PAGE_WRITE 0b10

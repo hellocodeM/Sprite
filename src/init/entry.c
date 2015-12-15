@@ -69,14 +69,9 @@ void kern_init() {
 
     //show_kern_mmap();
     //test_vmm();
-    //test_kmalloc();
+    test_kmalloc();
     //test_kthread();
     //test_ide();
-
-    atomic_t i;
-    i.add(1);
-    i.reduce(1);
-    i.set(1);
     
     while (1)
         cpu_hlt();
