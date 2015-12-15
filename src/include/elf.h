@@ -31,13 +31,12 @@ struct elf_symbol_t {
 } __attribute__((packed));
 
 // ELF 信息
-typedef
 struct elf_t {
   elf_symbol_t *symtab;
   uint32_t      symtabsz;
   const char   *strtab;
   uint32_t      strtabsz;
-} elf_t;
+};
 
 // 从 multiboot_t 结构获取ELF信息
 elf_t elf_from_multiboot(multiboot_t *mb);
