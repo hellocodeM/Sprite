@@ -12,6 +12,7 @@
 #include "common.h"
 #include "new.hpp"
 #include "atomic.h"
+
 void kern_init();
 
 multiboot_t *glb_mboot_ptr;
@@ -69,10 +70,10 @@ void kern_init() {
 
     //show_kern_mmap();
     //test_vmm();
-    test_kmalloc();
+    //test_kmalloc();
     //test_kthread();
     //test_ide();
-    
+
     while (1)
         cpu_hlt();
 }

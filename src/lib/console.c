@@ -101,12 +101,12 @@ inline static void console_write_hex_single(uint32_t n, real_color_t back, real_
 
 void console_write_hex(uint32_t n, real_color_t back, real_color_t fore) {
     const uint8_t mask = 0xF;
-    uint8_t started = FALSE;
+    uint8_t started = false;
     for (int i = 28; i >= 0; i -= 4) {
         uint8_t slice = (n & (mask << i)) >> i; 
         if (!started && slice != 0) {
             console_write_hex_single(slice, back, fore);
-            started = TRUE;
+            started = true;
         } else if (started) {
             console_write_hex_single(slice, back, fore);
         }

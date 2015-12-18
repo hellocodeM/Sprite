@@ -20,12 +20,12 @@ public:
     char TypeIn() {
         uint8_t k = inb(0x60);
         if (IsShift(k)) {
-            is_shifting = IsRelease(k) ? FALSE : TRUE;
+            is_shifting = IsRelease(k) ? false : true;
         } else if (IsCtrl(k)) {
-            is_ctrling = IsRelease(k) ? FALSE : TRUE;
+            is_ctrling = IsRelease(k) ? false : true;
         } else if (IsCapslock(k)) {
             if (IsPress(k))
-                is_capslock = is_capslock ? FALSE : TRUE;
+                is_capslock = is_capslock ? false : true;
         } else if (IsRelease(k)) {
 
         } else {
@@ -68,10 +68,10 @@ private:
         return k == 58;
     }
 
-    uint8_t is_shifting = FALSE;
-    uint8_t is_ctrling = FALSE;
-    uint8_t is_alting = FALSE;
-    uint8_t is_capslock = FALSE;
+    uint8_t is_shifting = false;
+    uint8_t is_ctrling = false;
+    uint8_t is_alting = false;
+    uint8_t is_capslock = false;
 };
 
 void keyboard_isr(pt_regs *regs) {
