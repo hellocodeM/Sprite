@@ -10,11 +10,14 @@ CC = g++
 LD = ld
 ASM = nasm
 
-C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb -gstabs+  -nostdinc -fno-builtin -fno-exceptions -fno-stack-protector -I include
-LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -nostdlib
+C_FLAGS = -std=c++14 -c -Wall -m32 -ggdb -gstabs+ -fno-builtin -fno-exceptions -fno-stack-protector -fno-rtti -I include 
+LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -static -L/usr/lib32/ -lstdc++
+#C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb -gstabs+ -nostdinc -fno-builtin -fno-exceptions -fno-stack-protector -I include
+#LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -nostdlib
 ASM_FLAGS = -f elf -g -F stabs
 
-all: $(S_OBJECTS) $(C_OBJECTS) link update_image
+#all: $(S_OBJECTS) $(C_OBJECTS) link update_image
+all: $(S_OBJECTS) $(C_OBJECTS) link
 
 .c.o:
 	@echo 编译代码文件 $< ...
@@ -31,23 +34,20 @@ link:
 clean:
 	$(RM) $(S_OBJECTS) $(C_OBJECTS) $(TARGET) 
 
-update_image:
-	sudo mount floppy.img /mnt/kernel
-	sudo cp $(TARGET) /mnt/kernel/$(TARGET)
-	sleep 1
-	sudo umount /mnt/kernel
-
-mount_image:
-	sudo mount floppy.img /mnt/kernel
-
-umount_image:
-	sudo umount /mnt/kernel
+#update_image:
+#	sudo mount floppy.img /mnt/kernel
+#	sudo cp $(TARGET) /mnt/kernel/$(TARGET)
+#	sleep 1
+#	sudo umount /mnt/kernel
+#
+#mount_image:
+#	sudo mount floppy.img /mnt/kernel
+#
+#umount_image:
+#	sudo umount /mnt/kernel
 
 qemu:
-	qemu -fda floppy.img -boot a -hda hdd.img
-
-bochs:
-	bochs -f tools/bochsrc.txt
+	qemu  -kernel Sprite -hda hdd.img
 
 debug:
 	qemu -S -gdb tcp::1080 -fda floppy.img -boot a -hda hdd.img &
