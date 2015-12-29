@@ -12,6 +12,7 @@
 #include "common.h"
 #include "new.hpp"
 #include "atomic.h"
+#include "fs.h"
 
 void kern_init();
 
@@ -73,6 +74,7 @@ void kern_init() {
     //test_kmalloc();
     //test_kthread();
     //test_ide();
+    test_fs();
 
     while (1)
         cpu_hlt();
