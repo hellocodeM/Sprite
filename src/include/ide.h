@@ -3,6 +3,9 @@
 
 #include "block_dev.h"
 
+
+constexpr uint32_t kSectorSize = 512;
+
 #define SECTSIZE 512  // 默认扇区大小
 
 #define STAT_BSY 0x80   // IDE驱动器忙
@@ -42,6 +45,9 @@
 // IDE设备限制值
 #define MAX_NSECS 128              // IDE设备最大操作扇区数
 #define MAX_DISK_NSECS 0x10000000  // IDE设备最大扇区号
+
+constexpr uint32_t kMaxSectors = 128;
+constexpr uint32_t kMaxDiskSector = 0x10000000;
 
 // IDE设备身份信息在读取的信息块中的偏移
 #define IDE_IDENT_SECTORS 20

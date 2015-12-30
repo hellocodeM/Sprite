@@ -44,4 +44,14 @@ void disable_intr();
  */
 void cpu_hlt();
 
+template <class T>
+constexpr const T& min(const T& lhs, const T& rhs) {
+    return lhs < rhs ? lhs : rhs;
+}
+
+template <class T>
+constexpr const T& max(const T& lhs, const T& rhs) {
+    return lhs < rhs ? rhs : lhs;
+}
+
 #endif

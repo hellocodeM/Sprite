@@ -47,9 +47,8 @@ clean:
 #	sudo umount /mnt/kernel
 
 qemu:
-	qemu  -kernel Sprite -hda hdd.img
+	qemu  -kernel $(TARGET) -hda hdd.img
 
 debug:
-	qemu -S -gdb tcp::1080 -fda floppy.img -boot a -hda hdd.img &
-	sleep 1
+	qemu -S -gdb tcp::1080 -hda hdd.img -kernel $(TARGET) &
 	cgdb -x scripts/gdbinit

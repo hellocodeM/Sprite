@@ -9,17 +9,19 @@ void page_fault_handler(pt_regs* regs) {
     asm volatile("mov %%cr2, %0" :  "=r"(addr));
     uint32_t err_code = regs->err_code;
 
-    // explain it
+    /* explain it
     printk("page fault at 0x%x:  ", addr);
     if (!(err_code & PAGE_WRITE)) {
         printk("read error\n");
     } else {
         printk("write error\n");
     }
+    */
     
     // if page is not present, allocate a physical page for it
     if (!(err_code & PAGE_PRESENT)) {
-        printk("allocate physical page for it, pma: 0x%x\n", page_dictionary[addr]);
+        //printk("allocate physical page for it, pma: 0x%x\n", page_dictionary[addr]);
+        page_dictionary[addr];
     }
 }
 

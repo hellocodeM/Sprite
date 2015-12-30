@@ -122,56 +122,73 @@ int ide_request(io_request_t *req) {
 
 // 读取指定IDE设备若干扇区
 int ide_read_secs(uint32_t secno, void *dst, uint32_t nsecs) {
-    assert(nsecs <= MAX_NSECS && ide_device.valid == 1, "nsecs or ide error!");
+    assert(ide_device.valid == 1, "ide device error");
+    // assert(nsecs <= MAX_NSECS, "too many nsecs");
     assert(secno < MAX_DISK_NSECS && secno + nsecs <= MAX_DISK_NSECS, "secno error!");
 
-    ide_wait_ready(IOBASE, 0);
+    uint8_t *out = static_cast<uint8_t *>(dst);
+    do {
+        uint32_t n = min(nsecs, kMaxSectors);
+        nsecs -= n;
 
-    outb(IOCTRL + ISA_CTRL, 0);
-    outb(IOBASE + ISA_SECCNT, nsecs);
-    outb(IOBASE + ISA_LBA_LOW, secno & 0xFF);
-    outb(IOBASE + ISA_LBA_MID, (secno >> 8) & 0xFF);
-    outb(IOBASE + ISA_LBA_HIGH, (secno >> 16) & 0xFF);
-    outb(IOBASE + ISA_LBA_TOP, 0xE0 | ((secno >> 24) & 0xF));
-    outb(IOBASE + ISA_COMMAND, IDE_CMD_READ);
+        ide_wait_ready(IOBASE, 0);
 
-    int ret = 0;
-    auto out = reinterpret_cast<uint8_t*>(dst);
-    for (; nsecs > 0; nsecs--, out += SECTSIZE) {
-        if ((ret = ide_wait_ready(IOBASE, 1)) != 0) {
-            return ret;
+        outb(IOCTRL + ISA_CTRL, 0);
+        outb(IOBASE + ISA_SECCNT, n);
+        outb(IOBASE + ISA_LBA_LOW, secno & 0xFF);
+        outb(IOBASE + ISA_LBA_MID, (secno >> 8) & 0xFF);
+        outb(IOBASE + ISA_LBA_HIGH, (secno >> 16) & 0xFF);
+        outb(IOBASE + ISA_LBA_TOP, 0xE0 | ((secno >> 24) & 0xF));
+        outb(IOBASE + ISA_COMMAND, IDE_CMD_READ);
+
+        int ret = 0;
+        for (; n > 0; n--, out += SECTSIZE) {
+            if ((ret = ide_wait_ready(IOBASE, 1)) != 0) {
+                return ret;
+            }
+            insl(IOBASE, out, SECTSIZE / sizeof(uint32_t));
         }
-        insl(IOBASE, out, SECTSIZE / sizeof(uint32_t));
-    }
 
-    return ret;
+        secno += n;
+        out += n * SECTSIZE;
+    } while (nsecs);
+
+    return 0;
 }
 
 // 写入指定IDE设备若干扇区
 int ide_write_secs(uint32_t secno, const void *src, uint32_t nsecs) {
-    assert(nsecs <= MAX_NSECS && ide_device.valid == 1, "nsecs or ide error");
+    assert(ide_device.valid == 1, "ide device error");
+    // assert(nsecs <= MAX_NSECS, "too many nsecs");
     assert(secno < MAX_DISK_NSECS && secno + nsecs <= MAX_DISK_NSECS, "secno error!");
 
-    ide_wait_ready(IOBASE, 0);
+    auto input = static_cast<const uint8_t *>(src);
+    do {
+        uint32_t n = min(nsecs, kMaxSectors);
+        nsecs -= n;
+        ide_wait_ready(IOBASE, 0);
 
-    outb(IOCTRL + ISA_CTRL, 0);
-    outb(IOBASE + ISA_SECCNT, nsecs);
-    outb(IOBASE + ISA_LBA_LOW, secno & 0xFF);
-    outb(IOBASE + ISA_LBA_MID, (secno >> 8) & 0xFF);
-    outb(IOBASE + ISA_LBA_HIGH, (secno >> 16) & 0xFF);
-    outb(IOBASE + ISA_LBA_TOP, 0xE0 | ((secno >> 24) & 0xF));
-    outb(IOBASE + ISA_COMMAND, IDE_CMD_WRITE);
+        outb(IOCTRL + ISA_CTRL, 0);
+        outb(IOBASE + ISA_SECCNT, n);
+        outb(IOBASE + ISA_LBA_LOW, secno & 0xFF);
+        outb(IOBASE + ISA_LBA_MID, (secno >> 8) & 0xFF);
+        outb(IOBASE + ISA_LBA_HIGH, (secno >> 16) & 0xFF);
+        outb(IOBASE + ISA_LBA_TOP, 0xE0 | ((secno >> 24) & 0xF));
+        outb(IOBASE + ISA_COMMAND, IDE_CMD_WRITE);
 
-    int ret = 0;
-    auto input = reinterpret_cast<const uint8_t*>(src);
-    for (; nsecs > 0; nsecs--, input += SECTSIZE) {
-        if ((ret = ide_wait_ready(IOBASE, 1)) != 0) {
-            return ret;
+        int ret = 0;
+        for (; n > 0; n--, input += SECTSIZE) {
+            if ((ret = ide_wait_ready(IOBASE, 1)) != 0) {
+                return ret;
+            }
+            outsl(IOBASE, input, SECTSIZE / sizeof(uint32_t));
         }
-        outsl(IOBASE, input, SECTSIZE / sizeof(uint32_t));
-    }
 
-    return ret;
+        secno += n;
+        input += n * SECTSIZE;
+    } while (nsecs);
+
+    return 0;
 }
 
 // IDE设备选项设置
@@ -185,16 +202,17 @@ int ide_ioctl(int op, int flag) {
 
 void test_ide() {
     uint8_t buffer[512];
+    const int secno = 1;
 
     // write
     for (int i = 0; i < 512; i++) {
         buffer[i] = i;
     }
-    ide_write_secs(5, buffer, 1);
+    ide_write_secs(secno, buffer, 1);
 
     // read
     bzero(buffer, 512);
-    ide_read_secs(5, buffer, 1);
+    ide_read_secs(secno, buffer, 1);
 
     for (int i = 0; i < 512; i++) {
         printk("%d ", buffer[i]);
