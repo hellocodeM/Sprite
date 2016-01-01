@@ -3,9 +3,9 @@
 
 #include "types.h"
 
-void memcpy(uint8_t *dst, uint8_t *src, uint32_t size);
+void memcpy(void *dst, void *src, uint32_t size);
 
-void memset(uint8_t *dst, uint8_t val, uint32_t size);
+void memset(void *dst, uint8_t val, uint32_t size);
 
 void bzero(void *dst, uint32_t size);
 

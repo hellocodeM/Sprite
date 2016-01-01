@@ -1,25 +1,25 @@
 #!Makefile
 
-C_SOURCES = $(shell find . -name "*.c")
-C_OBJECTS = $(patsubst %.c, %.o, $(C_SOURCES))
+C_SOURCES = $(shell find . -name "*.cc")
+C_OBJECTS = $(patsubst %.cc, %.o, $(C_SOURCES))
 S_SOURCES = $(shell find . -name "*.s")
 S_OBJECTS = $(patsubst %.s, %.o, $(S_SOURCES))
+HEADERS = $(shell find . -name "*.h")
 TARGET = Sprite
 
-CC = g++
+CC = clang++
 LD = ld
 ASM = nasm
 
-C_FLAGS = -std=c++14 -c -Wall -m32 -ggdb -gstabs+ -fno-builtin -fno-exceptions -fno-stack-protector -fno-rtti -I include 
-LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -static -L/usr/lib32/ -lstdc++
+C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb -fno-builtin -fno-exceptions -fno-stack-protector -fno-rtti -I include 
+LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -static -nostdlib
 #C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb -gstabs+ -nostdinc -fno-builtin -fno-exceptions -fno-stack-protector -I include
 #LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -nostdlib
 ASM_FLAGS = -f elf -g -F stabs
 
-#all: $(S_OBJECTS) $(C_OBJECTS) link update_image
-all: $(S_OBJECTS) $(C_OBJECTS) link
+all: $(S_OBJECTS) $(C_OBJECTS) $(HEADERS) link
 
-.c.o:
+.cc.o:
 	@echo 编译代码文件 $< ...
 	$(CC) $(C_FLAGS) $< -o $@
 
@@ -32,24 +32,11 @@ link:
 	$(LD) $(LD_FLAGS) $(S_OBJECTS) $(C_OBJECTS) -o $(TARGET)
 
 clean:
-	$(RM) $(S_OBJECTS) $(C_OBJECTS) $(TARGET) 
-
-#update_image:
-#	sudo mount floppy.img /mnt/kernel
-#	sudo cp $(TARGET) /mnt/kernel/$(TARGET)
-#	sleep 1
-#	sudo umount /mnt/kernel
-#
-#mount_image:
-#	sudo mount floppy.img /mnt/kernel
-#
-#umount_image:
-#	sudo umount /mnt/kernel
+	rm $(S_OBJECTS) $(C_OBJECTS) $(TARGET) 
 
 qemu:
-	qemu  -kernel Sprite -hda hdd.img
+	qemu  -kernel $(TARGET) -hda hdd.img
 
 debug:
-	qemu -S -gdb tcp::1080 -fda floppy.img -boot a -hda hdd.img &
-	sleep 1
+	qemu -S -gdb tcp::1080 -hda hdd.img -kernel $(TARGET) &
 	cgdb -x scripts/gdbinit

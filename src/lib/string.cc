@@ -1,11 +1,14 @@
 #include "string.h"
 
-void memcpy(uint8_t *dst, uint8_t *src, uint32_t size) {
-    for (uint32_t i = 0; i < size; i++) dst[i] = src[i];
+void memcpy(void *dst, void *src, uint32_t size) {
+    uint8_t* p = static_cast<uint8_t*>(dst);
+    uint8_t* q = static_cast<uint8_t*>(src);
+    for (uint32_t i = 0; i < size; i++) p[i] = q[i];
 }
 
-void memset(uint8_t *dst, uint8_t val, uint32_t size) {
-    for (uint32_t i = 0; i < size; i++) dst[i] = val;
+void memset(void *dst, uint8_t val, uint32_t size) {
+    uint8_t* p = static_cast<uint8_t*>(dst);
+    for (uint32_t i = 0; i < size; i++) p[i] = val;
 }
 
 void bzero(void *dst, uint32_t size) { memset((uint8_t*)dst, 0, size); }

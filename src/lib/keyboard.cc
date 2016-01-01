@@ -70,7 +70,6 @@ private:
 
     uint8_t is_shifting = false;
     uint8_t is_ctrling = false;
-    uint8_t is_alting = false;
     uint8_t is_capslock = false;
 };
 

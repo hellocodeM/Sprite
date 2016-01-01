@@ -2,7 +2,7 @@
 #include "ILAllocator.hpp"
 #include "printk.h"
 #include "debug.h"
-#include "new.hpp"
+#include "new.h"
 
 const uint32_t kHeapStart = 0xD0000000;
 const uint32_t kHeapEnd = 0xD1000000;
