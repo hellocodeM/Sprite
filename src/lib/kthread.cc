@@ -1,6 +1,6 @@
 #include "kthread.h"
 #include "scheduler.h"
-#include "new.hpp"
+#include "new.h"
 
 static TaskScheduler scheduler;
 
