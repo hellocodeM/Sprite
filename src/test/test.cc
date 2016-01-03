@@ -1,6 +1,21 @@
 #include <cassert>
 
 #include "bitmap.hpp"
+#include "lrucache.hpp"
+
+void test_cache() {
+    LRUCache<int, 3> cache;
+    cache.Set(0, new int(0));
+    cache.Set(1, new int(1));
+    assert(*cache.Get(0) == 0);
+    cache.Set(2, new int(2));
+    assert(*cache.Get(1) == 1);
+    assert(*cache.Get(0) == 0);
+    assert(*cache.Get(2) == 2);
+    
+    cache.Set(4, new int(4));
+    assert(cache.Get(1) == nullptr);
+}
 
 void test_bitmap() {
     bitmap<32> bm;
@@ -20,4 +35,5 @@ void test_bitmap() {
 
 int main() {
     test_bitmap();
+    test_cache();
 }
