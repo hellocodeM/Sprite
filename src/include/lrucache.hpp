@@ -52,11 +52,10 @@ public:
     /* modifier */
 
     /**
-     * cache a value.
+     * Allocate a Cache
      */
-    void Set(size_t k, const T& v) { Set(k, &v); }
-
     T* Alloc(size_t k) { return Set(k, nullptr); }
+
     /**
      * Get the cache.
      * If miss, return nullptr

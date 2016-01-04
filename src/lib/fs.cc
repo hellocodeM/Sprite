@@ -37,9 +37,23 @@ void write_block(uint32_t bno) {
     ide_write_secs(block_to_sector(bno), buff, block_to_sector(1));
 }
 
+/* inode operations */
+
 /**
- * FS operations
+ * Find an entry in a dir, it could be a directory or a regular file.
  */
+m_inode* find_entry(const m_inode* dir, const char* name) {
+    assert(is_directory(dir->mode), "is not a dir");
+    auto entry = reinterpret_cast<dir_entry*>(read_block(dir->zone[0]));
+    auto end = entry + dir->size / sizeof(dir_entry);
+    for (; entry != end; ++entry) {
+        if (strcmp(entry->name, name) == 0) return &g_inode_table[entry->inode];
+    }
+    return nullptr;
+}
+
+/* FS operations */
+
 void init_fs() {
     // init super block
     memcpy(&g_super_block, read_block(kSuperBlockBNO), sizeof(g_super_block));
@@ -77,28 +91,9 @@ void test_fs() {
         // test open and read a file
         m_inode& root = g_inode_table[kRootINO];
 
-        printk("root inode size: %d; ", root.size);
-        printk("root inode mode: %x; ", root.mode);
-        if (is_directory(root.mode)) {
-            printk("is directory\n");
-            auto entry = reinterpret_cast<dir_entry*>(read_block(root.zone[0]));
-            auto end = entry + root.size / sizeof(dir_entry);
-            for (; entry != end; entry++) {
-                printk(entry->name);
-                printk("\n");
-                if (strcmp(entry->name, "test.txt") == 0) {
-                    printk("context of test.txt:\n");
-                    auto& node = g_inode_table[entry->inode];
-                    auto contents = (char*)(read_block(node.zone[0]));
-                    printk(contents);
-
-                    memcpy(contents, "shit", 5);
-                    node.size = 5;
-                    write_block(node.zone[0]);
-                    // write_inode(entry->inode);
-                }
-            }
-        }
-        printk("\n------------------------------------------------\n");
+        auto node = find_entry(&root, "test.txt");
+        auto contents = (char*)(read_block(node->zone[0]));
+        printk("contents of test.txt\n");
+        printk(contents);
     }
 }

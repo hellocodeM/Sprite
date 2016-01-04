@@ -163,6 +163,8 @@ void write_block(block_buffer* bb);
 /*----------------------- inode layer ----------------------------*/
 extern m_inode g_inode_table[kNumInodes];
 
+m_inode* find_entry(const m_inode* dir, const char* name);
+
 /*------------------------ fs layer -------------------------------*/
 
 void init_fs();

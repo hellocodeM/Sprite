@@ -5,13 +5,14 @@
 #include "string.h"
 #include "printk.h"
 
-#define assert(x, info)   \
-    do {                  \
-        if (!(x)) {       \
-            printk(info); \
-            while (1)     \
-                ;         \
-        }                 \
+#define assert(x, info)                                  \
+    do {                                                 \
+        if (!(x)) {                                      \
+            printk("%s: line %d\n", __FILE__, __LINE__); \
+            printk(info);                                \
+            while (1)                                    \
+                ;                                        \
+        }                                                \
     } while (0)
 
 #define static_assert(x) switch (x){case 0 : case (x):; }
