@@ -11,7 +11,7 @@ CC = clang++
 LD = ld
 ASM = nasm
 
-C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb -fno-builtin -fno-exceptions -fno-stack-protector -fno-rtti -I include 
+C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb3 -fno-builtin -fno-exceptions -fno-stack-protector -fno-rtti -I include 
 LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -static -nostdlib
 #C_FLAGS = -std=c++14 -c -Wall -Wno-unused-function -m32 -ggdb -gstabs+ -nostdinc -fno-builtin -fno-exceptions -fno-stack-protector -I include
 #LD_FLAGS = -T scripts/kernel.ld -m elf_i386 -nostdlib

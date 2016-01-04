@@ -12,9 +12,11 @@ class LRUCache {
 private:
     struct ListNode {
         size_t key;
-        ListNode* prev;
-        ListNode* next;
+        ListNode* prev = nullptr;
+        ListNode* next = nullptr;
         T value;
+
+        ListNode() {}
     };
 
 public:
@@ -52,7 +54,26 @@ public:
     /**
      * cache a value.
      */
-    void Set(size_t k, const T& v) {
+    void Set(size_t k, const T& v) { Set(k, &v); }
+
+    T* Alloc(size_t k) { return Set(k, nullptr); }
+    /**
+     * Get the cache.
+     * If miss, return nullptr
+     */
+    T* Get(size_t k) {
+        size_t hash_value = hash(k);
+        int cnt = 0;
+        while (++cnt <= size() && table_[hash_value] && table_[hash_value]->key != k) {
+            hash_value = rehash(hash_value);
+        }
+        if (!table_[hash_value] || cnt > size()) return nullptr;
+        Promote(hash_value);
+        return &table_[hash_value]->value;
+    }
+
+private:
+    T* Set(size_t k, T* v) {
         if (count() >= size()) {
             auto tmp = front();
             pop_front();
@@ -71,26 +92,10 @@ public:
             push_back(entry);
         }
         entry->key = k;
-        entry->value = v;
+        if (v) entry->value = *v;
         Promote(hash_value);
+        return &entry->value;
     }
-
-    /**
-     * Get the cache.
-     * If miss, return nullptr
-     */
-    T* Get(size_t k) {
-        size_t hash_value = hash(k);
-        int cnt = 0;
-        while (++cnt <= size() && table_[hash_value] && table_[hash_value]->key != k) {
-            hash_value = rehash(hash_value);
-        }
-        if (!table_[hash_value] || cnt > size()) return nullptr;
-        Promote(hash_value);
-        return &table_[hash_value]->value;
-    }
-
-private:
     /**
      * move a list-node to the head of queue
      */

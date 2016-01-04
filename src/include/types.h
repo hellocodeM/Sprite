@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-using size_t = unsigned long long;
+using size_t = unsigned long;
 
 #endif // TYPES_H

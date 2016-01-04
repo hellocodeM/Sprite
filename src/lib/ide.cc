@@ -122,7 +122,7 @@ int ide_request(io_request_t *req) {
 
 // 读取指定IDE设备若干扇区
 int ide_read_secs(uint32_t secno, void *dst, uint32_t nsecs) {
-    assert(ide_device.valid == 1, "ide device error");
+    assert(ide_device_valid(), "ide device error");
     // assert(nsecs <= MAX_NSECS, "too many nsecs");
     assert(secno < MAX_DISK_NSECS && secno + nsecs <= MAX_DISK_NSECS, "secno error!");
 

@@ -6,68 +6,80 @@
 #include "kmalloc.h"
 #include "lrucache.hpp"
 
-d_inode g_inode_table[kNumInodes];
+// global variables
+m_inode g_inode_table[kNumInodes];
 LRUCache<block_buffer, 307> g_block_cache;
+super_block g_super_block;
 
-int read_zones(uint32_t zno, void* dst, uint32_t count) {
-    return read_blocks(zone_to_block(zno), dst, zone_to_block(count));
+block_buffer* get_block(uint32_t bno) {
+    block_buffer* buff = g_block_cache.Get(bno);
+    if (!buff) buff = g_block_cache.Alloc(bno);
+    return buff;
 }
 
-int write_zones(uint32_t zno, const void* src, uint32_t count) {
-    return write_blocks(zone_to_block(zno), src, zone_to_block(count));
+block_buffer* read_block(uint32_t bno) {
+    block_buffer* buff = get_block(bno);
+    ide_read_secs(block_to_sector(bno), buff->data, block_to_sector(1));
+    return buff;
 }
 
-int read_blocks(uint32_t bno, void* dst, uint32_t count) {
-    return ide_read_secs(block_to_sector(bno), dst, block_to_sector(count));
+void put_block(block_buffer* bb) {
+    if (bb->dirt) {
+        ide_write_secs(block_to_sector(bb->blocknr), bb->data, block_to_sector(1));
+    }
 }
 
-int write_blocks(uint32_t bno, const void* src, uint32_t count) {
-    return ide_write_secs(block_to_sector(bno), src, block_to_sector(count));
-}
+void init_fs() {
+    // init super block
+    memcpy(&g_super_block, read_block(kSuperBlockBNO)->data, sizeof(g_super_block));
 
-void init_fs() {}
+    // init inode table
+    int block_start = 2 + g_super_block.num_imap_blocks + g_super_block.num_zmap_blocks;
+    int num_blocks = (g_super_block.num_inodes * sizeof(d_inode) + kBlockSize) / kBlockSize - 1;
+
+    int inode_cnt = 1;
+    for (uint32_t i = block_start; i < block_start + num_blocks; i++) {
+        d_inode* inodes = reinterpret_cast<d_inode*>(read_block(i)->data);
+        for (int j = 0, end = kNumInodesPerBlock; j < end; j++) {
+            memcpy(&g_inode_table[inode_cnt], inodes + j, sizeof(d_inode));
+            ++inode_cnt;
+        }
+    }
+}
 
 void test_fs() {
     {
         // test super block
-        super_block sb;
-
-        if (read_super_block(&sb) == 0) {
-            printk("number of inodes: %d\n", (uint32_t)sb.num_inodes);
-            printk("number of zones:  %d\n", (uint32_t)sb.num_zones);
-            printk("number of inode bitmap blocks: %d\n", (uint32_t)sb.num_imap_blocks);
-            printk("number of zone bitmap blocks: %d\n", (uint32_t)sb.num_zmap_blocks);
-            printk("first data zone: %d\n", (uint32_t)sb.first_data_zone);
-            printk("log zone size: %d\n", (uint32_t)sb.log_zone_size);
-            printk("max file size: %dbytes\n", (uint32_t)sb.max_size);
-            printk("magic number: 0x%x\n", (uint32_t)sb.magic);
-            printk("-------------------------------------------\n");
-        } else {
-            assert(false, "read failed");
-        }
+        super_block& sb = g_super_block;
+        printk("number of inodes: %d\n", (uint32_t)sb.num_inodes);
+        printk("number of zones:  %d\n", (uint32_t)sb.num_zones);
+        printk("number of inode bitmap blocks: %d\n", (uint32_t)sb.num_imap_blocks);
+        printk("number of zone bitmap blocks: %d\n", (uint32_t)sb.num_zmap_blocks);
+        printk("first data zone: %d\n", (uint32_t)sb.first_data_zone);
+        printk("log zone size: %d\n", (uint32_t)sb.log_zone_size);
+        printk("max file size: %dbytes\n", (uint32_t)sb.max_size);
+        printk("magic number: 0x%x\n", (uint32_t)sb.magic);
+        printk("-------------------------------------------\n");
     }
 
     {
         // test open and read a file
-        m_inode root;
-        
-        assert(read_root_inode(&root) == 0, "read root inode");
+        m_inode& root = g_inode_table[kRootINO];
+
         printk("root inode size: %d; ", root.size);
         printk("root inode mode: %x; ", root.mode);
         if (is_directory(root.mode)) {
             printk("is directory\n");
-            uint8_t buff[kBlockSize];
-            read_blocks(root.zone[1], buff, 1);
-            dir_entry* entry = reinterpret_cast<dir_entry*>(buff);
-            dir_entry* end = entry + root.size / sizeof(dir_entry);
+            auto entry = reinterpret_cast<dir_entry*>(read_block(root.zone[0])->data);
+            auto end = entry + root.size / sizeof(dir_entry);
             for (; entry != end; entry++) {
                 printk(entry->name);
                 printk("\n");
                 if (strcmp(entry->name, "test.txt") == 0) {
                     printk("context of test.txt:\n");
-                    d_inode* node = read_inode(entry->inode);
-                    read_blocks(node->zone[0], buff, 1);
-                    printk(buff);
+                    auto& node = g_inode_table[entry->inode];
+                    auto contents = (char*)(read_block(node.zone[0])->data);
+                    printk(contents);
                 }
             }
         }

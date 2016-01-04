@@ -68,6 +68,7 @@ void kern_init() {
     init_kthread();
     init_timer(200);
     assert(ide_init() == 0, "ide not available");
+    init_fs();
 
     console_clear();
     printk("Hello, Code\n");

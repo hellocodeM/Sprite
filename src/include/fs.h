@@ -24,6 +24,7 @@ constexpr uint32_t kBlockSize = 1024;
 constexpr uint32_t kZoneBlockFactor = 1;
 constexpr uint32_t kZoneSize = kBlockSize * kZoneBlockFactor;
 constexpr uint32_t kNumInodes = 128;
+#define kNumInodesPerBlock (kBlockSize / sizeof(d_inode))
 
 constexpr bool is_regular(uint16_t mode) { return (mode & S_IFMT) == S_IFREG; }
 
@@ -39,16 +40,6 @@ static constexpr uint32_t block_to_zone(uint32_t block_idx) { return block_idx /
 
 constexpr uint32_t block_addr(uint16_t block_idx) { return (uint32_t)block_idx * kBlockSize; }
 
-/**
- * File segment.
- * zero segment: kZoneSize * 7
- * first segment: kZoneSize * 512
- * second segment: kZoneSize * 512 * 512
- */
-constexpr uint32_t kFileFirstSegment = kZoneSize * 7;
-constexpr uint32_t kFileSecondSegment = kFileFirstSegment + kZoneSize * 512;
-constexpr uint32_t kFileMaxSize = kFileSecondSegment + kZoneSize * 512 * 512;
-
 struct block_buffer {
     uint8_t* data;    /* pointer to data block (1024 bytes) */
     uint32_t blocknr; /* block number */
@@ -59,7 +50,9 @@ struct block_buffer {
     uint8_t lock;  /* 0 - ok, 1 -locked */
     task_struct* wait;
 
-    block_buffer() = default;
+    block_buffer() {
+        data = new uint8_t[kBlockSize];
+    }
 
     block_buffer(const block_buffer& other) {
         memcpy(this, &other, sizeof(other));
@@ -69,13 +62,13 @@ struct block_buffer {
 
     block_buffer& operator= (const block_buffer& other) {
         memcpy(this, &other,sizeof(other));
-        data = new uint8_t[kBlockSize];
         memcpy(data, other.data, kBlockSize);
         return *this;
     }
 
     ~block_buffer() {
-        delete data;
+        delete[] data;
+        data = nullptr;
     }
 };
 
@@ -99,7 +92,7 @@ struct d_inode {
 struct m_inode {
     uint16_t mode;
     uint16_t uid;
-    uint16_t size;
+    uint32_t size;
     uint32_t mtime;
     uint8_t gid;
     uint8_t num_links;
@@ -173,51 +166,23 @@ struct dir_entry {
  */
 
 /* block layer */
-int read_blocks(uint32_t bno, void* dst, uint32_t count);
-int write_blocks(uint32_t bno, const void* src, uint32_t count);
-
-inline int read_super_block(super_block* sb) {
-    uint8_t buff[kBlockSize];
-    if (int res = read_blocks(kSuperBlockBNO, buff, 1)) return res;
-    memcpy(sb, buff, sizeof(super_block));
-    return 0;
-}
-
-/* zone layer */
-int read_zones(uint32_t zno, void* dst, uint32_t count);
-int write_zones(uint32_t zno, const void* src, uint32_t count);
-
-/* inode layer */
 template <class T, size_t N>
 class LRUCache;
-extern d_inode g_inode_table[kNumInodes];
+
+extern super_block g_super_block;
 extern LRUCache<block_buffer, 307> g_block_cache;
 
-static inline uint32_t inode_zone_bno() {
-    super_block sb;
-    read_super_block(&sb);
-    return 2 + sb.num_imap_blocks + sb.num_zmap_blocks;
-}
+block_buffer* get_block(uint32_t bno);
+block_buffer* read_block(uint32_t bno);
+void put_block(block_buffer* bb);
 
-static int read_root_inode(m_inode* root) {
-    uint32_t root_bno = inode_zone_bno();
-    uint8_t buff[kBlockSize];
 
-    if (int res = read_blocks(root_bno, buff, kRootINO)) return res;
-    memcpy(root, buff, sizeof(m_inode));
-    return 0;
-}
+/* zone layer */
 
-static d_inode* read_inode(uint16_t ino) {
-    super_block sb;
-    read_super_block(&sb);
-    int num_blocks = sb.num_inodes * sizeof(d_inode) / kBlockSize;
-    read_blocks(inode_zone_bno(), g_inode_table, num_blocks);
+/* inode layer */
+extern m_inode g_inode_table[kNumInodes];
 
-    return g_inode_table + ino - 1;
-}
-
-/* file layer */
+/* fs layer */
 
 void init_fs();
 void test_fs();
