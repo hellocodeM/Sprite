@@ -12,41 +12,47 @@ class LRUCache {
 private:
     struct ListNode {
         size_t key;
-        T* value;
         ListNode* prev;
         ListNode* next;
+        T value;
     };
 
 public:
-    LRUCache() {}
+    LRUCache() = default;
 
-    ~LRUCache() {
-        if (queue_) {
-            auto iter = queue_;
-            do {
-                delete iter->value;
-                iter = iter->next;
-            } while (iter != queue_);
-        }
-    }
+    ~LRUCache() { clear(); }
 
     void clear() {
         for (auto& x : table_) x = nullptr;
         if (queue_) {
             auto iter = queue_;
             do {
-                delete iter->value;
-                iter = iter->next;
+                auto tmp = iter->next;
+                delete iter;
+                iter = tmp;
             } while (iter != queue_);
+            queue_ = nullptr;
+        }
+        while (free_) {
+            auto tmp = free_->next;
+            delete free_;
+            free_ = tmp;
         }
     }
 
     size_t size() const { return N; }
 
+    /**
+     * Number of cache.
+     */
     size_t count() const { return count_; }
 
     /* modifier */
-    void Set(size_t k, T* v) {
+
+    /**
+     * cache a value.
+     */
+    void Set(size_t k, const T& v) {
         if (count() >= size()) {
             auto tmp = front();
             pop_front();
@@ -61,7 +67,7 @@ public:
 
         auto& entry = table_[hash_value];
         if (!entry) {
-            entry = new ListNode();
+            entry = alloc();
             push_back(entry);
         }
         entry->key = k;
@@ -69,6 +75,10 @@ public:
         Promote(hash_value);
     }
 
+    /**
+     * Get the cache.
+     * If miss, return nullptr
+     */
     T* Get(size_t k) {
         size_t hash_value = hash(k);
         int cnt = 0;
@@ -77,23 +87,58 @@ public:
         }
         if (!table_[hash_value] || cnt > size()) return nullptr;
         Promote(hash_value);
-        return table_[hash_value]->value;
+        return &table_[hash_value]->value;
     }
 
 private:
+    /**
+     * move a list-node to the head of queue
+     */
+    void Promote(size_t k) {
+        auto node = table_[k];
+        detach(node);
+        if (node == queue_) queue_ = queue_->next;
+        push_back(node);
+    }
+
+    /**
+     * hash table operations
+     */
     size_t hash(size_t value) const { return value % size(); }
 
     size_t rehash(size_t value) const { return hash(++value); }
 
     void erase(size_t k) {
         size_t hash_value = hash(k);
-        while (table_[hash_value]->key != hash_value) {
+        while (table_[hash_value]->key != k) {
             hash_value = rehash(hash_value);
         }
+        free(table_[hash_value]);
         table_[hash_value] = nullptr;
     }
 
-    /* queue operations */
+    /**
+     * Allocator for the ListNode.
+     * Use a list as a object pool, to avoid frequently allocation.
+     */
+    ListNode* alloc() {
+        if (free_) {
+            auto tmp = free_;
+            free_ = free_->next;
+            return tmp;
+        } else {
+            return new ListNode();
+        }
+    }
+
+    void free(ListNode* node) {
+        node->next = free_;
+        free_ = node;
+    }
+
+    /**
+     * queue operations
+     */
     void detach(ListNode* x) {
         --count_;
         x->prev->next = x->next;
@@ -130,17 +175,10 @@ private:
         return queue_;
     }
 
-    void Promote(size_t k) {
-        auto node = table_[k];
-        detach(node);
-        if (node == queue_)
-            queue_ = queue_->next;
-        push_back(node);
-    }
-
     /* data members */
-    ListNode* queue_ = nullptr;
-    ListNode* table_[N] = {nullptr};
+    ListNode* queue_ = nullptr;       // LRU queue
+    ListNode* free_ = nullptr;        // ListNode pool
+    ListNode* table_[N] = {nullptr};  // hash table
     size_t count_ = 0;
 };
 

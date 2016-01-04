@@ -5,16 +5,19 @@
 
 void test_cache() {
     LRUCache<int, 3> cache;
-    cache.Set(0, new int(0));
-    cache.Set(1, new int(1));
+    cache.Set(0, 0);
+    cache.Set(1, 1);
     assert(*cache.Get(0) == 0);
-    cache.Set(2, new int(2));
+    cache.Set(2, 2);
     assert(*cache.Get(1) == 1);
     assert(*cache.Get(0) == 0);
     assert(*cache.Get(2) == 2);
     
-    cache.Set(4, new int(4));
+    cache.Set(4, 4);
     assert(cache.Get(1) == nullptr);
+
+    for (int i = 0; i < 1024; i++)
+        cache.Set(i, i);
 }
 
 void test_bitmap() {
