@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void memcpy(void *dst, void *src, uint32_t size);
+void memcpy(void *dst, const void *src, uint32_t size);
 
 void memset(void *dst, uint8_t val, uint32_t size);
 

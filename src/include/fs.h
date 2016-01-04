@@ -3,6 +3,8 @@
 
 #include "types.h"
 #include "string.h"
+#include "new.h"
+#include "common.h"
 
 /* forward declaration */
 struct task_struct;
@@ -11,19 +13,6 @@ struct task_struct;
 #define S_IFREG 0100000
 #define S_IFBLK 0060000
 #define S_IFDIR 0040000
-#define S_ISREG(m) (((m)&S_IFMT) == S_IFREG)
-#define S_ISDIR(m) (((m)&S_IFMT) == S_IFDIR)
-#define S_ISCHR(m) (((m)&S_IFMT) == S_IFCHR)
-#define S_ISBLK(m) (((m)&S_IFMT) == S_IFBLK)
-#define S_ISFIFO(m) (((m)&S_IFMT) == S_IFIFO)
-
-constexpr bool is_regular(uint16_t mode) {
-    return (mode & S_IFMT) == S_IFREG;
-}
-
-constexpr bool is_directory(uint16_t mode) {
-    return (mode & S_IFMT) == S_IFDIR;
-}
 
 constexpr uint32_t kMBRBNO = 0;         // Master Boot Record Block NO
 constexpr uint32_t kSuperBlockBNO = 1;  // Super Block NO
@@ -36,6 +25,9 @@ constexpr uint32_t kZoneBlockFactor = 1;
 constexpr uint32_t kZoneSize = kBlockSize * kZoneBlockFactor;
 constexpr uint32_t kNumInodes = 128;
 
+constexpr bool is_regular(uint16_t mode) { return (mode & S_IFMT) == S_IFREG; }
+
+constexpr bool is_directory(uint16_t mode) { return (mode & S_IFMT) == S_IFDIR; }
 
 static constexpr uint32_t block_to_sector(uint32_t bno) { return bno * kBlockSectorFactor; }
 
@@ -45,9 +37,8 @@ static constexpr uint32_t zone_to_block(uint32_t zone_idx) { return zone_idx * k
 
 static constexpr uint32_t block_to_zone(uint32_t block_idx) { return block_idx / kZoneBlockFactor; }
 
-constexpr uint32_t block_addr(uint16_t block_idx) {
-    return (uint32_t)block_idx * kBlockSize;
-}
+constexpr uint32_t block_addr(uint16_t block_idx) { return (uint32_t)block_idx * kBlockSize; }
+
 /**
  * File segment.
  * zero segment: kZoneSize * 7
@@ -58,8 +49,8 @@ constexpr uint32_t kFileFirstSegment = kZoneSize * 7;
 constexpr uint32_t kFileSecondSegment = kFileFirstSegment + kZoneSize * 512;
 constexpr uint32_t kFileMaxSize = kFileSecondSegment + kZoneSize * 512 * 512;
 
-struct buffer_head {
-    char* data;       /* pointer to data block (1024 bytes) */
+struct block_buffer {
+    uint8_t* data;    /* pointer to data block (1024 bytes) */
     uint32_t blocknr; /* block number */
     uint16_t dev;     /* device (0 = free) */
     uint8_t uptodate;
@@ -67,10 +58,25 @@ struct buffer_head {
     uint8_t count; /* users using this block */
     uint8_t lock;  /* 0 - ok, 1 -locked */
     task_struct* wait;
-    buffer_head* prev;
-    buffer_head* next;
-    buffer_head* prev_free;
-    buffer_head* next_free;
+
+    block_buffer() = default;
+
+    block_buffer(const block_buffer& other) {
+        memcpy(this, &other, sizeof(other));
+        data = new uint8_t[kBlockSize];
+        memcpy(data, other.data, kBlockSize);
+    }
+
+    block_buffer& operator= (const block_buffer& other) {
+        memcpy(this, &other,sizeof(other));
+        data = new uint8_t[kBlockSize];
+        memcpy(data, other.data, kBlockSize);
+        return *this;
+    }
+
+    ~block_buffer() {
+        delete data;
+    }
 };
 
 /**
@@ -85,7 +91,7 @@ struct d_inode {
     uint8_t num_links;  // hard link number
     uint16_t zone[9];   // zone[0] ~ zone[6] direct pointer, zone[7] points to first level index
                         // table, zone[8] second level.
-}__attribute__((packed));
+} __attribute__((packed));
 
 /**
  * in memory inode
@@ -111,7 +117,7 @@ struct m_inode {
     uint8_t mount;
     uint8_t seek;
     uint8_t update;
-}__attribute__((packed));
+} __attribute__((packed));
 
 struct file {
     uint16_t mode;
@@ -131,8 +137,8 @@ struct super_block {
     uint32_t max_size;
     uint16_t magic;
     /* These are only in memory */
-    buffer_head* imap[8];
-    buffer_head* zmap[8];
+    block_buffer* imap[8];
+    block_buffer* zmap[8];
     uint16_t dev;
     m_inode* isup;
     m_inode* imount;
@@ -157,7 +163,7 @@ struct d_super_block {
 struct dir_entry {
     uint16_t inode;
     char name[kNameLen];
-}__attribute__((packed));
+} __attribute__((packed));
 
 /*
  * ide layer
@@ -182,7 +188,10 @@ int read_zones(uint32_t zno, void* dst, uint32_t count);
 int write_zones(uint32_t zno, const void* src, uint32_t count);
 
 /* inode layer */
-extern d_inode inode_table[kNumInodes];
+template <class T, size_t N>
+class LRUCache;
+extern d_inode g_inode_table[kNumInodes];
+extern LRUCache<block_buffer, 307> g_block_cache;
 
 static inline uint32_t inode_zone_bno() {
     super_block sb;
@@ -199,16 +208,14 @@ static int read_root_inode(m_inode* root) {
     return 0;
 }
 
-
 static d_inode* read_inode(uint16_t ino) {
     super_block sb;
     read_super_block(&sb);
     int num_blocks = sb.num_inodes * sizeof(d_inode) / kBlockSize;
-    read_blocks(inode_zone_bno(), inode_table, num_blocks);
+    read_blocks(inode_zone_bno(), g_inode_table, num_blocks);
 
-    return inode_table + ino - 1;
+    return g_inode_table + ino - 1;
 }
-
 
 /* file layer */
 

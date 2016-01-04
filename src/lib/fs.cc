@@ -4,8 +4,10 @@
 #include "printk.h"
 #include "debug.h"
 #include "kmalloc.h"
+#include "lrucache.hpp"
 
-d_inode inode_table[kNumInodes];
+d_inode g_inode_table[kNumInodes];
+LRUCache<block_buffer, 307> g_block_cache;
 
 int read_zones(uint32_t zno, void* dst, uint32_t count) {
     return read_blocks(zone_to_block(zno), dst, zone_to_block(count));

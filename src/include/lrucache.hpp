@@ -146,7 +146,7 @@ private:
     }
 
     void push_back(ListNode* x) {
-        assert(count_ < size());
+        assert(count_ < size(), "full list");
         ++count_;
         if (queue_) {
             auto last = queue_->prev;
@@ -162,7 +162,7 @@ private:
 
     void pop_front() {
         --count_;
-        assert(queue_ && "empty list");
+        assert(queue_, "empty list");
         auto last = queue_->prev;
         auto successor = queue_->next;
         successor->prev = last;
@@ -171,7 +171,7 @@ private:
     }
 
     ListNode* front() {
-        assert(queue_ && "empty list");
+        assert(queue_, "empty list");
         return queue_;
     }
 

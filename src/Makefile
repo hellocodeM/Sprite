@@ -1,6 +1,6 @@
 #!Makefile
 
-C_SOURCES = $(shell find . -name "*.cc")
+C_SOURCES = $(shell find lib/ init/ -name "*.cc")
 C_OBJECTS = $(patsubst %.cc, %.o, $(C_SOURCES))
 S_SOURCES = $(shell find . -name "*.s")
 S_OBJECTS = $(patsubst %.s, %.o, $(S_SOURCES))
