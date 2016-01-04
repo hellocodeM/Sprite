@@ -92,7 +92,9 @@ private:
             push_back(entry);
         }
         entry->key = k;
-        if (v) entry->value = *v;
+        if (v) {
+            memcpy(&entry->value, v, sizeof(T));
+        }
         Promote(hash_value);
         return &entry->value;
     }

@@ -41,35 +41,9 @@ static constexpr uint32_t block_to_zone(uint32_t block_idx) { return block_idx /
 constexpr uint32_t block_addr(uint16_t block_idx) { return (uint32_t)block_idx * kBlockSize; }
 
 struct block_buffer {
-    uint8_t* data;    /* pointer to data block (1024 bytes) */
-    uint32_t blocknr; /* block number */
-    uint16_t dev;     /* device (0 = free) */
-    uint8_t uptodate;
-    uint8_t dirt;  /* 0-clean,1-dirty */
-    uint8_t count; /* users using this block */
-    uint8_t lock;  /* 0 - ok, 1 -locked */
-    task_struct* wait;
-
-    block_buffer() {
-        data = new uint8_t[kBlockSize];
-    }
-
-    block_buffer(const block_buffer& other) {
-        memcpy(this, &other, sizeof(other));
-        data = new uint8_t[kBlockSize];
-        memcpy(data, other.data, kBlockSize);
-    }
-
-    block_buffer& operator= (const block_buffer& other) {
-        memcpy(this, &other,sizeof(other));
-        memcpy(data, other.data, kBlockSize);
-        return *this;
-    }
-
-    ~block_buffer() {
-        delete[] data;
-        data = nullptr;
-    }
+    uint8_t data[kBlockSize]; /* block data */
+    uint8_t count;            /* users using this block */
+    uint8_t lock;             /* 0 - ok, 1 -locked */
 };
 
 /**
@@ -158,31 +132,38 @@ struct dir_entry {
     char name[kNameLen];
 } __attribute__((packed));
 
-/*
- * ide layer
- *
+/*---------------------ide layer -------------------------------*/
+/**
  * int ide_read_secs(uint32_t secno, void* dst, uint32_t nsecs);
  * int ide_write_secs(uint32_t secon, const void* src, uint32_t nsecs);
  */
 
-/* block layer */
+/* --------------------block layer  ---------------------------*/
 template <class T, size_t N>
 class LRUCache;
 
 extern super_block g_super_block;
 extern LRUCache<block_buffer, 307> g_block_cache;
 
+/**
+ * Get a block for write.
+ */
 block_buffer* get_block(uint32_t bno);
+
+/**
+ * Read a block, maybe from cache instead of disk.
+ */
 block_buffer* read_block(uint32_t bno);
-void put_block(block_buffer* bb);
 
+/**
+ * write data to a block, the buffer should come from get_block
+ */
+void write_block(block_buffer* bb);
 
-/* zone layer */
-
-/* inode layer */
+/*----------------------- inode layer ----------------------------*/
 extern m_inode g_inode_table[kNumInodes];
 
-/* fs layer */
+/*------------------------ fs layer -------------------------------*/
 
 void init_fs();
 void test_fs();

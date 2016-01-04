@@ -11,27 +11,38 @@ m_inode g_inode_table[kNumInodes];
 LRUCache<block_buffer, 307> g_block_cache;
 super_block g_super_block;
 
+/**
+ * Block operations
+ */
 block_buffer* get_block(uint32_t bno) {
-    block_buffer* buff = g_block_cache.Get(bno);
-    if (!buff) buff = g_block_cache.Alloc(bno);
+    auto buff = g_block_cache.Get(bno);
+    if (!buff) {
+        buff = g_block_cache.Alloc(bno);
+    }
     return buff;
 }
 
 block_buffer* read_block(uint32_t bno) {
-    block_buffer* buff = get_block(bno);
-    ide_read_secs(block_to_sector(bno), buff->data, block_to_sector(1));
+    // the data in cache is always uptodate, so we could directly return it
+    auto buff = g_block_cache.Get(bno);
+    if (!buff) {
+        buff = g_block_cache.Alloc(bno);
+        ide_read_secs(block_to_sector(bno), buff, block_to_sector(1));
+    }
     return buff;
 }
 
-void put_block(block_buffer* bb) {
-    if (bb->dirt) {
-        ide_write_secs(block_to_sector(bb->blocknr), bb->data, block_to_sector(1));
-    }
+void write_block(uint32_t bno) {
+    auto buff = g_block_cache.Get(bno);
+    ide_write_secs(block_to_sector(bno), buff, block_to_sector(1));
 }
 
+/**
+ * FS operations
+ */
 void init_fs() {
     // init super block
-    memcpy(&g_super_block, read_block(kSuperBlockBNO)->data, sizeof(g_super_block));
+    memcpy(&g_super_block, read_block(kSuperBlockBNO), sizeof(g_super_block));
 
     // init inode table
     int block_start = 2 + g_super_block.num_imap_blocks + g_super_block.num_zmap_blocks;
@@ -39,7 +50,7 @@ void init_fs() {
 
     int inode_cnt = 1;
     for (uint32_t i = block_start; i < block_start + num_blocks; i++) {
-        d_inode* inodes = reinterpret_cast<d_inode*>(read_block(i)->data);
+        d_inode* inodes = reinterpret_cast<d_inode*>(read_block(i));
         for (int j = 0, end = kNumInodesPerBlock; j < end; j++) {
             memcpy(&g_inode_table[inode_cnt], inodes + j, sizeof(d_inode));
             ++inode_cnt;
@@ -70,7 +81,7 @@ void test_fs() {
         printk("root inode mode: %x; ", root.mode);
         if (is_directory(root.mode)) {
             printk("is directory\n");
-            auto entry = reinterpret_cast<dir_entry*>(read_block(root.zone[0])->data);
+            auto entry = reinterpret_cast<dir_entry*>(read_block(root.zone[0]));
             auto end = entry + root.size / sizeof(dir_entry);
             for (; entry != end; entry++) {
                 printk(entry->name);
@@ -78,8 +89,13 @@ void test_fs() {
                 if (strcmp(entry->name, "test.txt") == 0) {
                     printk("context of test.txt:\n");
                     auto& node = g_inode_table[entry->inode];
-                    auto contents = (char*)(read_block(node.zone[0])->data);
+                    auto contents = (char*)(read_block(node.zone[0]));
                     printk(contents);
+
+                    memcpy(contents, "shit", 5);
+                    node.size = 5;
+                    write_block(node.zone[0]);
+                    // write_inode(entry->inode);
                 }
             }
         }
