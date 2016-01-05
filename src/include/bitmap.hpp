@@ -135,6 +135,8 @@ public:
     }
 
     friend void init_fs();
+    friend void sync_imap();
+    friend void sync_zmap();
 private:
     const static int length_ = (N - 1) / 8 / sizeof(bit_store) + 1;
     bit_store data_[length_];

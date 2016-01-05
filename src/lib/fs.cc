@@ -35,9 +35,12 @@ block_buffer* read_block(uint32_t bno) {
     return buff;
 }
 
-void write_block(uint32_t bno) {
-    auto buff = g_block_cache.Get(bno);
-    ide_write_secs(block_to_sector(bno), buff, block_to_sector(1));
+bool write_block(uint32_t bno) {
+    if (auto buff = g_block_cache.Get(bno)) {
+        ide_write_secs(block_to_sector(bno), buff, block_to_sector(1));
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -45,13 +48,87 @@ void write_block(uint32_t bno) {
  */
 static void uncache(size_t bno, block_buffer* buff) { write_block(bno); }
 
+void sync_super_block() {
+    auto block = get_block(kSuperBlockBNO);
+    memcpy(block, &g_super_block, sizeof(d_super_block));
+}
+
+void sync_imap() {
+    int imap_start = 2;
+    int imap_last = imap_start + g_super_block.num_imap_blocks - 1;
+    int byte_cnt = 0;
+
+    for (int i = imap_start; i <= imap_last; i++) {
+        auto block = get_block(i);
+        if (i < imap_last) {
+            memcpy(block, g_imap.data_ + byte_cnt, kBlockSize);
+            byte_cnt += kBlockSize;
+        } else {
+            memcpy(block, g_imap.data_ + byte_cnt, g_super_block.num_inodes / 8 - byte_cnt);
+        }
+        write_block(i);
+    }
+}
+
+void sync_zmap() {
+    int zmap_start = 2 + g_super_block.num_imap_blocks;
+    int zmap_last = zmap_start + g_super_block.num_zmap_blocks - 1;
+    int byte_cnt = 0;
+
+    for (int i = zmap_start; i <= zmap_last; i++) {
+        auto block = get_block(i);
+        if (i < zmap_last) {
+            memcpy(block, g_zmap.data_ + byte_cnt, kBlockSize);
+            byte_cnt += kBlockSize;
+        } else {
+            memcpy(block, g_zmap.data_ + byte_cnt, g_super_block.num_zones / 8 - byte_cnt);
+        }
+        write_block(i);
+    }
+}
+
+void sync_inodes() {
+    int inodes_start = 2 + g_super_block.num_imap_blocks + g_super_block.num_zmap_blocks;
+    int inodes_end =
+        inodes_start + ceil_div(sizeof(d_inode) * g_super_block.num_inodes, kBlockSize);
+    int inode_cnt = 1;
+
+    for (int i = inodes_start; i < inodes_end; i++) {
+        auto block = reinterpret_cast<d_inode*>(get_block(i));
+        for (int j = 0; j < kNumInodesPerBlock; j++) {
+            memcpy(block + j, g_inode_table + inode_cnt, sizeof(d_inode));
+            ++inode_cnt;
+        }
+        write_block(i);
+    }
+}
+
+void sync_all() {
+    sync_super_block();
+    sync_imap();
+    sync_zmap();
+    sync_inodes();
+}
 /* inode operations */
 
 /**
  * Read data zone of a inode.
  * param block: number of zone
  */
-block_buffer* read_inode(const m_inode* inode, uint32_t zone) {}
+block_buffer* read_inode(const m_inode* inode, uint32_t zone) {
+    if (zone < 7) {
+        return read_block(inode->zone[zone]);
+    } else if (zone < 7 + 512){
+        zone -= 7;
+        auto zones = reinterpret_cast<uint16_t*>(read_block(inode->zone[7]));
+        return read_block(zones[zone]);
+    } else {
+        zone -= 7 + 512;
+        auto zone_table = reinterpret_cast<uint16_t*>(read_block(inode->zone[8]));
+        auto zones = reinterpret_cast<uint16_t*>(read_block(zone_table[zone / 512]));
+        return read_block(zones[zone % 512]);
+    }
+}
 
 /**
  * Find an entry in a dir, it could be a directory or a regular file.
@@ -100,13 +177,12 @@ void init_fs() {
     for (int i = imap_start; i <= imap_last; i++) {
         auto block = read_block(i);
         if (i < imap_last) {
-            memcpy(g_imap.data_+byte_cnt, block, kBlockSize);
+            memcpy(g_imap.data_ + byte_cnt, block, kBlockSize);
             byte_cnt += kBlockSize;
         } else {
-            memcpy(g_imap.data_+byte_cnt, block, g_super_block.num_inodes / 8 - byte_cnt);
+            memcpy(g_imap.data_ + byte_cnt, block, g_super_block.num_inodes / 8 - byte_cnt);
         }
     }
-    
 
     int zmap_start = 2 + g_super_block.num_imap_blocks;
     int zmap_last = zmap_start + g_super_block.num_zmap_blocks - 1;
@@ -139,12 +215,28 @@ void test_fs() {
     }
 
     {
-        // test open and read a file
         m_inode& root = g_inode_table[kRootINO];
+        
+        printk("files in /\nname\tsize\tlinks\n");
+        auto entry = reinterpret_cast<dir_entry*>(read_inode(&root, 0));
+        auto entry_end = entry + root.size / sizeof(dir_entry);
+        for (; entry < entry_end; ++entry) {
+            auto& inode = g_inode_table[entry->inode];
+            printk("%s\t%d\t%d\n", entry->name, inode.size, inode.num_links);
+        }
 
-        auto node = find_entry(&root, "test.txt");
-        auto contents = (char*)(read_block(node->zone[0]));
-        printk("contents of test.txt\n");
-        printk(contents);
+        if (auto node = find_entry(&root, "test.txt")) {
+            //auto contents = (char*)(read_block(node->zone[0]));
+            auto contents = reinterpret_cast<char*>(read_inode(node, 0));
+            printk("contents of test.txt\n");
+            printk(contents);
+            /*
+            memcpy(contents, "shit", 5);
+            node->size = 5;
+            write_block(node->zone[0]);
+            sync_inodes();
+            */
+        }
+        sync_all();
     }
 }

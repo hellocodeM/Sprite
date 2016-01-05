@@ -17,7 +17,7 @@ struct task_struct;
 constexpr uint32_t kMBRBNO = 0;         // Master Boot Record Block NO
 constexpr uint32_t kSuperBlockBNO = 1;  // Super Block NO
 constexpr uint32_t kRootINO = 1;        // root inode NO
-constexpr uint32_t kNameLen = 14;       // maximum length of file name
+constexpr uint32_t kNameLen = 30;       // maximum length of file name
 constexpr uint32_t kSuperMagic = 0x137F;
 constexpr uint32_t kBlockSectorFactor = 2;
 constexpr uint32_t kBlockSize = 1024;
@@ -39,6 +39,8 @@ static constexpr uint32_t zone_to_block(uint32_t zone_idx) { return zone_idx * k
 static constexpr uint32_t block_to_zone(uint32_t block_idx) { return block_idx / kZoneBlockFactor; }
 
 constexpr uint32_t block_addr(uint16_t block_idx) { return (uint32_t)block_idx * kBlockSize; }
+
+constexpr int ceil_div(int x, int y) { return (x-1) / y + 1; }
 
 struct block_buffer {
     uint8_t data[kBlockSize]; /* block data */
@@ -156,7 +158,13 @@ block_buffer* read_block(uint32_t bno);
 /**
  * write data to a block, the buffer should come from get_block
  */
-void write_block(block_buffer* bb);
+bool write_block(block_buffer* bb);
+
+void sync_super_block();
+void sync_imap();
+void sync_zmap();
+void sync_inodes();
+void sync_all();
 
 /*----------------------- inode layer ----------------------------*/
 template <size_t N>
