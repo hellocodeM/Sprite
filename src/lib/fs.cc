@@ -115,10 +115,10 @@ void sync_all() {
  * Read data zone of a inode.
  * param block: number of zone
  */
-block_buffer* read_inode(const m_inode* inode, uint32_t zone) {
+block_buffer* read_zone(const m_inode* inode, uint32_t zone) {
     if (zone < 7) {
         return read_block(inode->zone[zone]);
-    } else if (zone < 7 + 512){
+    } else if (zone < 7 + 512) {
         zone -= 7;
         auto zones = reinterpret_cast<uint16_t*>(read_block(inode->zone[7]));
         return read_block(zones[zone]);
@@ -134,11 +134,24 @@ block_buffer* read_inode(const m_inode* inode, uint32_t zone) {
  * Find an entry in a dir, it could be a directory or a regular file.
  */
 m_inode* find_entry(const m_inode* dir, const char* name) {
-    assert(is_directory(dir->mode), "is not a dir");
-    auto entry = reinterpret_cast<dir_entry*>(read_block(dir->zone[0]));
-    auto end = entry + dir->size / sizeof(dir_entry);
-    for (; entry != end; ++entry) {
-        if (strcmp(entry->name, name) == 0) return &g_inode_table[entry->inode];
+    if (!is_directory(dir->mode)) return nullptr;
+    int num_entries = dir->size / sizeof(dir_entry);
+    int num_zones = ceil_div(dir->size, kZoneSize);
+    int entry_cnt = 0;
+
+    for (int i = 0; i < num_zones; i++) {
+        auto entry = reinterpret_cast<dir_entry*>(read_zone(dir, i));
+        auto end = entry;
+        if (entry_cnt < num_zones - 1) {
+            end += kZoneSize / sizeof(dir_entry);
+            entry_cnt += kZoneSize / sizeof(dir_entry);
+        } else {
+            end += num_entries - entry_cnt;
+        }
+        for (; entry != end; ++entry) {
+            if (strcmp(entry->name, name) == 0) 
+                return g_inode_table + entry->inode;
+        }
     }
     return nullptr;
 }
@@ -146,7 +159,21 @@ m_inode* find_entry(const m_inode* dir, const char* name) {
 /**
  * Find the inode for the specific name
  */
-m_inode* namei(const char* name) {}
+m_inode* namei(const char* path) {
+    assert(path[0] == '/', "path must start with /");
+    m_inode* inode = g_inode_table + kRootINO;
+    int len = 0;
+    
+    while (true) {
+        path += len + 1;
+        auto delim = strfind(path, '/');
+        len = delim - path;
+        inode = find_entry(inode, path);
+        if (!*delim) // reach the last entry
+            break;
+    }
+    return inode;
+}
 
 /* FS operations */
 
@@ -216,20 +243,22 @@ void test_fs() {
 
     {
         m_inode& root = g_inode_table[kRootINO];
-        
+
         printk("files in /\nname\tsize\tlinks\n");
-        auto entry = reinterpret_cast<dir_entry*>(read_inode(&root, 0));
+        auto entry = reinterpret_cast<dir_entry*>(read_zone(&root, 0));
         auto entry_end = entry + root.size / sizeof(dir_entry);
         for (; entry < entry_end; ++entry) {
             auto& inode = g_inode_table[entry->inode];
             printk("%s\t%d\t%d\n", entry->name, inode.size, inode.num_links);
         }
 
-        if (auto node = find_entry(&root, "test.txt")) {
-            //auto contents = (char*)(read_block(node->zone[0]));
-            auto contents = reinterpret_cast<char*>(read_inode(node, 0));
-            printk("contents of test.txt\n");
+        if (auto node = namei("/test/test.txt")) {
+            // auto contents = (char*)(read_block(node->zone[0]));
+            auto contents = reinterpret_cast<char*>(read_zone(node, 0));
+            printk("contents of test.txt: ");
             printk(contents);
+            printk("\n");
+
             /*
             memcpy(contents, "shit", 5);
             node->size = 5;
