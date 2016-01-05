@@ -104,8 +104,6 @@ struct super_block {
     uint32_t max_size;
     uint16_t magic;
     /* These are only in memory */
-    block_buffer* imap[8];
-    block_buffer* zmap[8];
     uint16_t dev;
     m_inode* isup;
     m_inode* imount;
@@ -161,7 +159,12 @@ block_buffer* read_block(uint32_t bno);
 void write_block(block_buffer* bb);
 
 /*----------------------- inode layer ----------------------------*/
+template <size_t N>
+class bitmap;
+
 extern m_inode g_inode_table[kNumInodes];
+extern bitmap<128> g_imap;
+extern bitmap<10240> g_zmap;
 
 m_inode* find_entry(const m_inode* dir, const char* name);
 

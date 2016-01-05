@@ -20,9 +20,15 @@ private:
     };
 
 public:
+    using uncache_callback = void (*)(size_t, T*);
+
     LRUCache() = default;
 
     ~LRUCache() { clear(); }
+
+    void SetUncacheCallback(uncache_callback cb) {
+        cb_ = cb;
+    }
 
     void clear() {
         for (auto& x : table_) x = nullptr;
@@ -138,6 +144,8 @@ private:
     }
 
     void free(ListNode* node) {
+        // before uncache, we need to call the callback, such as write the data back to disk
+        if (cb_) cb_(node->key, &node->value);
         node->next = free_;
         free_ = node;
     }
@@ -186,6 +194,7 @@ private:
     ListNode* free_ = nullptr;        // ListNode pool
     ListNode* table_[N] = {nullptr};  // hash table
     size_t count_ = 0;
+    uncache_callback cb_;
 };
 
 #endif

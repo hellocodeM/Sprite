@@ -10,6 +10,7 @@ template <size_t N>
 class bitmap {
 public:
     using bit_store = uint8_t;
+
     class bit_ref {
         bit_ref(bitmap<N>* bm, size_t pos) : bits_(bm), pos_(pos) {}
         friend bitmap;
@@ -33,7 +34,11 @@ public:
 
     bitmap(const bitmap& rhs) = default;
 
+    bitmap(void* bits, size_t len) { assign(bits, len); }
+
     ~bitmap() = default;
+
+    void assign(void* bits, size_t len) { memcpy(data_, bits, len); }
 
     bit_ref operator[](size_t idx) { return bit_ref(this, idx); }
 
@@ -129,6 +134,7 @@ public:
         return *this;
     }
 
+    friend void init_fs();
 private:
     const static int length_ = (N - 1) / 8 / sizeof(bit_store) + 1;
     bit_store data_[length_];
