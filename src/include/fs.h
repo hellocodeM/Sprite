@@ -175,6 +175,7 @@ extern bitmap<128> g_imap;
 extern bitmap<10240> g_zmap;
 
 m_inode* find_entry(const m_inode* dir, const char* name);
+m_inode* namei(const char* path);
 block_buffer* read_zone(const m_inode* inode, uint32_t zone);
 
 /*------------------------ fs layer -------------------------------*/

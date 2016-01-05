@@ -44,6 +44,53 @@ bool write_block(uint32_t bno) {
 }
 
 /**
+ * Read blocks from disk.
+ * The destination memory address is continuous, but address on disk is not, it is fragmented into
+ * blocks.
+ * So we need to read the blocks one by one.
+ *
+ * param Input : source type
+ * param Output: destination type
+ * param start_bon: source block number
+ * param dst: destination address
+ * param count: number of items to copy
+ * param size: size of each item
+ */
+template <class Input, class Output>
+bool read_blocks(size_t start_bno, void* dst, size_t count, size_t size) {
+    auto block = reinterpret_cast<Input*>(read_block(start_bno));
+    auto src = block;
+    auto dst_ = reinterpret_cast<Output*>(dst);
+
+    for (int i = 0; i < count; i++, dst_++, src++) {
+        if ((uint8_t*)src >= (uint8_t*)block + kBlockSize) {
+            src = block = reinterpret_cast<Input*>(read_block(++start_bno));
+            if (!src) return false;
+        }
+        memcpy(dst_, src, size);
+    }
+    return true;
+}
+
+template <class Input, class Output>
+bool write_blocks(void* src, size_t output_bno, size_t count, size_t size) {
+    auto block = reinterpret_cast<Output*>(get_block(output_bno));
+    auto dst = block;
+    auto src_ = reinterpret_cast<Input*>(src);
+
+    for (int i = 0; i < count; i++, dst++, src_++) {
+        if ((uint8_t*)dst >= (uint8_t*)block + kBlockSize) {
+            write_block(output_bno++);
+            block = dst = reinterpret_cast<Output*>(get_block(output_bno));
+            if (!block) return false;
+        }
+        memcpy(dst, src_, size);
+    }
+    write_block(output_bno);
+    return true;
+}
+
+/**
  * Callback for cache
  */
 static void uncache(size_t bno, block_buffer* buff) { write_block(bno); }
@@ -51,56 +98,25 @@ static void uncache(size_t bno, block_buffer* buff) { write_block(bno); }
 void sync_super_block() {
     auto block = get_block(kSuperBlockBNO);
     memcpy(block, &g_super_block, sizeof(d_super_block));
+    write_block(kSuperBlockBNO);
 }
 
 void sync_imap() {
     int imap_start = 2;
-    int imap_last = imap_start + g_super_block.num_imap_blocks - 1;
-    int byte_cnt = 0;
-
-    for (int i = imap_start; i <= imap_last; i++) {
-        auto block = get_block(i);
-        if (i < imap_last) {
-            memcpy(block, g_imap.data_ + byte_cnt, kBlockSize);
-            byte_cnt += kBlockSize;
-        } else {
-            memcpy(block, g_imap.data_ + byte_cnt, g_super_block.num_inodes / 8 - byte_cnt);
-        }
-        write_block(i);
-    }
+    int count = g_super_block.num_inodes / 8;
+    write_blocks<uint8_t, uint8_t>(g_imap.data_, imap_start, count, sizeof(uint8_t));
 }
 
 void sync_zmap() {
     int zmap_start = 2 + g_super_block.num_imap_blocks;
-    int zmap_last = zmap_start + g_super_block.num_zmap_blocks - 1;
-    int byte_cnt = 0;
-
-    for (int i = zmap_start; i <= zmap_last; i++) {
-        auto block = get_block(i);
-        if (i < zmap_last) {
-            memcpy(block, g_zmap.data_ + byte_cnt, kBlockSize);
-            byte_cnt += kBlockSize;
-        } else {
-            memcpy(block, g_zmap.data_ + byte_cnt, g_super_block.num_zones / 8 - byte_cnt);
-        }
-        write_block(i);
-    }
+    int count = g_super_block.num_zones / 8;
+    write_blocks<uint8_t, uint8_t>(g_zmap.data_, zmap_start, count, sizeof(uint8_t));
 }
 
 void sync_inodes() {
-    int inodes_start = 2 + g_super_block.num_imap_blocks + g_super_block.num_zmap_blocks;
-    int inodes_end =
-        inodes_start + ceil_div(sizeof(d_inode) * g_super_block.num_inodes, kBlockSize);
-    int inode_cnt = 1;
-
-    for (int i = inodes_start; i < inodes_end; i++) {
-        auto block = reinterpret_cast<d_inode*>(get_block(i));
-        for (int j = 0; j < kNumInodesPerBlock; j++) {
-            memcpy(block + j, g_inode_table + inode_cnt, sizeof(d_inode));
-            ++inode_cnt;
-        }
-        write_block(i);
-    }
+    int inode_start = 2 + g_super_block.num_imap_blocks + g_super_block.num_zmap_blocks;
+    write_blocks<m_inode, d_inode>(g_inode_table + 1, inode_start, g_super_block.num_inodes,
+                                   sizeof(d_inode));
 }
 
 void sync_all() {
@@ -135,24 +151,20 @@ block_buffer* read_zone(const m_inode* inode, uint32_t zone) {
  */
 m_inode* find_entry(const m_inode* dir, const char* name) {
     if (!is_directory(dir->mode)) return nullptr;
-    int num_entries = dir->size / sizeof(dir_entry);
-    int num_zones = ceil_div(dir->size, kZoneSize);
-    int entry_cnt = 0;
 
-    for (int i = 0; i < num_zones; i++) {
-        auto entry = reinterpret_cast<dir_entry*>(read_zone(dir, i));
-        auto end = entry;
-        if (entry_cnt < num_zones - 1) {
-            end += kZoneSize / sizeof(dir_entry);
-            entry_cnt += kZoneSize / sizeof(dir_entry);
-        } else {
-            end += num_entries - entry_cnt;
+    int zone_cnt = 0;
+    auto zone = reinterpret_cast<dir_entry*>(read_zone(dir, zone_cnt));
+    auto entry = zone;
+    int num_entries = dir->size / sizeof(dir_entry);
+
+    for (int i = 0; i < num_entries; i++, ++entry) {
+        if ((uint8_t*)entry >= (uint8_t*)zone + kZoneSize) {
+            zone = entry = reinterpret_cast<dir_entry*>(read_zone(dir, ++zone_cnt));
         }
-        for (; entry != end; ++entry) {
-            if (strcmp(entry->name, name) == 0) 
-                return g_inode_table + entry->inode;
-        }
+        if (strcmp(entry->name, name) == 0)
+            return g_inode_table + entry->inode;
     }
+
     return nullptr;
 }
 
@@ -162,14 +174,13 @@ m_inode* find_entry(const m_inode* dir, const char* name) {
 m_inode* namei(const char* path) {
     assert(path[0] == '/', "path must start with /");
     m_inode* inode = g_inode_table + kRootINO;
-    int len = 0;
-    
+    const char* delim = path;
+
     while (true) {
-        path += len + 1;
-        auto delim = strfind(path, '/');
-        len = delim - path;
+        path = delim + 1;
+        delim = strfind(path, '/');
         inode = find_entry(inode, path);
-        if (!*delim) // reach the last entry
+        if (!*delim)  // reach the last entry
             break;
     }
     return inode;
@@ -180,50 +191,19 @@ m_inode* namei(const char* path) {
 void init_fs() {
     // init super block
     memcpy(&g_super_block, read_block(kSuperBlockBNO), sizeof(g_super_block));
-
     // init block cache
     g_block_cache.SetUncacheCallback(&uncache);
-
     // init inode table
     int block_start = 2 + g_super_block.num_imap_blocks + g_super_block.num_zmap_blocks;
-    int num_blocks = (g_super_block.num_inodes * sizeof(d_inode) - 1) / kBlockSize + 1;
-
-    int inode_cnt = 1;
-    for (uint32_t i = block_start; i < block_start + num_blocks; i++) {
-        d_inode* inodes = reinterpret_cast<d_inode*>(read_block(i));
-        for (int j = 0, end = kNumInodesPerBlock; j < end; j++) {
-            memcpy(&g_inode_table[inode_cnt], inodes + j, sizeof(d_inode));
-            ++inode_cnt;
-        }
-    }
-
+    read_blocks<d_inode, m_inode>(block_start, g_inode_table + 1, g_super_block.num_inodes,
+                                  sizeof(d_inode));
     // init bitmap
     int imap_start = 2;
-    int imap_last = imap_start + g_super_block.num_imap_blocks - 1;
-    int byte_cnt = 0;
-    for (int i = imap_start; i <= imap_last; i++) {
-        auto block = read_block(i);
-        if (i < imap_last) {
-            memcpy(g_imap.data_ + byte_cnt, block, kBlockSize);
-            byte_cnt += kBlockSize;
-        } else {
-            memcpy(g_imap.data_ + byte_cnt, block, g_super_block.num_inodes / 8 - byte_cnt);
-        }
-    }
-
+    read_blocks<uint8_t, uint8_t>(imap_start, g_imap.data_, g_super_block.num_inodes / 8,
+                                  sizeof(uint8_t));
     int zmap_start = 2 + g_super_block.num_imap_blocks;
-    int zmap_last = zmap_start + g_super_block.num_zmap_blocks - 1;
-    byte_cnt = 0;
-
-    for (int i = zmap_start; i <= zmap_last; i++) {
-        auto block = read_block(i);
-        if (i < zmap_last) {
-            memcpy(g_zmap.data_ + byte_cnt, block, kBlockSize);
-            byte_cnt += kBlockSize;
-        } else {
-            memcpy(g_zmap.data_ + byte_cnt, block, g_super_block.num_zones / 8 - byte_cnt);
-        }
-    }
+    read_blocks<uint8_t, uint8_t>(zmap_start, g_zmap.data_, g_super_block.num_zones / 8,
+                                  sizeof(uint8_t));
 }
 
 void test_fs() {
@@ -255,16 +235,14 @@ void test_fs() {
         if (auto node = namei("/test/test.txt")) {
             // auto contents = (char*)(read_block(node->zone[0]));
             auto contents = reinterpret_cast<char*>(read_zone(node, 0));
-            printk("contents of test.txt: ");
+            printk("size: %d; contents of test.txt: ", node->size);
             printk(contents);
             printk("\n");
 
-            /*
-            memcpy(contents, "shit", 5);
-            node->size = 5;
+            memcpy(contents, "hello world", 12);
+            node->size = 12;
             write_block(node->zone[0]);
             sync_inodes();
-            */
         }
         sync_all();
     }
