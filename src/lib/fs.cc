@@ -95,6 +95,9 @@ bool write_blocks(void* src, size_t output_bno, size_t count, size_t size) {
  */
 static void uncache(size_t bno, block_buffer* buff) { write_block(bno); }
 
+/**
+ * Synchronization data to disk.
+ */
 void sync_super_block() {
     auto block = get_block(kSuperBlockBNO);
     memcpy(block, &g_super_block, sizeof(d_super_block));
@@ -125,6 +128,7 @@ void sync_all() {
     sync_zmap();
     sync_inodes();
 }
+
 /* inode operations */
 
 /**
@@ -147,9 +151,12 @@ block_buffer* read_zone(const m_inode* inode, uint32_t zone) {
 }
 
 /**
- * Find an entry in a dir, it could be a directory or a regular file.
+ * Traverse a directory, with a callback.
+ * The callback takes in an entry of directory, and return a bool value, if return true, the
+ * traversal will stop.
  */
-m_inode* find_entry(const m_inode* dir, const char* name) {
+template <class Fn>
+m_inode* traverse_dir(const m_inode* dir, Fn cb) {
     if (!is_directory(dir->mode)) return nullptr;
 
     int zone_cnt = 0;
@@ -161,11 +168,18 @@ m_inode* find_entry(const m_inode* dir, const char* name) {
         if ((uint8_t*)entry >= (uint8_t*)zone + kZoneSize) {
             zone = entry = reinterpret_cast<dir_entry*>(read_zone(dir, ++zone_cnt));
         }
-        if (strcmp(entry->name, name) == 0)
-            return g_inode_table + entry->inode;
+        if (cb(entry)) return g_inode_table + entry->inode;
     }
-
     return nullptr;
+}
+
+/**
+ * Find an entry in a dir, it could be a directory or a regular file.
+ */
+m_inode* find_entry(const m_inode* dir, const char* name) {
+    if (!is_directory(dir->mode)) return nullptr;
+
+    return traverse_dir(dir, [name](dir_entry* entry) { return strcmp(entry->name, name) == 0; });
 }
 
 /**
@@ -206,6 +220,19 @@ void init_fs() {
                                   sizeof(uint8_t));
 }
 
+void list_entries(const m_inode* inode) {
+    if (is_directory(inode->mode)) {
+        traverse_dir(inode, [&](dir_entry* entry) {
+            auto node = g_inode_table + entry->inode;
+            if (entry->name[0] != '.') {
+                printk("%s\t%d\t%s\n", entry->name, node->size, is_directory(node->mode) ? "dir" : "file");
+                list_entries(node);
+            }
+            return false;
+        });
+    }
+}
+
 void test_fs() {
     {
         // test super block
@@ -222,18 +249,10 @@ void test_fs() {
     }
 
     {
-        m_inode& root = g_inode_table[kRootINO];
-
-        printk("files in /\nname\tsize\tlinks\n");
-        auto entry = reinterpret_cast<dir_entry*>(read_zone(&root, 0));
-        auto entry_end = entry + root.size / sizeof(dir_entry);
-        for (; entry < entry_end; ++entry) {
-            auto& inode = g_inode_table[entry->inode];
-            printk("%s\t%d\t%d\n", entry->name, inode.size, inode.num_links);
-        }
+        printk("files in /\nname\tsize\ttype\n");
+        list_entries(g_inode_table + kRootINO);
 
         if (auto node = namei("/test/test.txt")) {
-            // auto contents = (char*)(read_block(node->zone[0]));
             auto contents = reinterpret_cast<char*>(read_zone(node, 0));
             printk("size: %d; contents of test.txt: ", node->size);
             printk(contents);
@@ -242,7 +261,6 @@ void test_fs() {
             memcpy(contents, "hello world", 12);
             node->size = 12;
             write_block(node->zone[0]);
-            sync_inodes();
         }
         sync_all();
     }

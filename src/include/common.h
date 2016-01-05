@@ -54,4 +54,21 @@ constexpr const T& max(const T& lhs, const T& rhs) {
     return lhs < rhs ? rhs : lhs;
 }
 
+
+template <class L, class R>
+struct is_same {
+    const static bool value = false;
+};
+
+template <class T>
+struct is_same<T, T> {
+    const static bool value = true;
+};
+
+template <bool V>
+struct enable_if;
+
+template <>
+struct enable_if<true> {};
+
 #endif
