@@ -8,4 +8,4 @@ Until now, it implements:
 - physical memory management
 - virtual memory management
 - kernel thread
-- IDE hard disk access
+- Minix file system
